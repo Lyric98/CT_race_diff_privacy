@@ -123,9 +123,12 @@ adat<-merge(exp_l,cov_l,by=c('GEOID','race'))
 
 ## check CTs' expected counts ##
 adat<-subset(adat,exp_counts_ce>0 & exp_counts_dp>0 & exp_counts_dp0527>0)
-# dim(adat)
-# 8111    6
 adat<-adat[order(adat$GEOID),]
+
+# remove all the race groups from the dataset expect black and white
+adat <- adat %>% filter(race == 'white' | race == 'black')
+# dim(adat)
+# 2877    6
 
 ## add black & white index
 adat$bw_ind<-0

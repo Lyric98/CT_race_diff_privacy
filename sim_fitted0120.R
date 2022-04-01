@@ -28,7 +28,7 @@ library(epitools)
 
 set.seed(2)
 
-# current_path <- getActiveDocumentContext()$path
+# current_path <- g etActiveDocumentContext()$path
 # setwd(dirname(current_path))
 
 

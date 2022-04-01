@@ -1,0 +1,477 @@
+---
+title: "bias in fitted values"
+author: "Yanran"
+date: "2022/01/27"
+output: html_document
+---
+
+```{r library}
+library(maptools)
+library(spdep)
+library(MASS)
+library(msm)
+library(tigris)
+library(CARBayes)
+library(tidyverse)
+library(tidycensus)
+library(sp)
+library(stringr)
+library(haven)
+library(reshape2)
+library(rstudioapi)
+library(dplyr)
+library(RColorBrewer)
+library(purrr)
+library(epitools)
+library(ggplot2)
+```
+
+
+```{r sim_from_cluster}
+current_path <- getActiveDocumentContext()$path
+setwd(dirname(current_path))
+load("simnum4.RData")
+dp0527_fit <- cars
+dp0527_fit_mean <- apply(dp0527_fit, 2, mean)
+load("simnum5.RData")
+dp_fit <- cars
+dp_fit_mean <- apply(dp_fit, 2, mean)
+load("simnum6.RData")
+ce_fit <- cars
+ce_fit_mean <- apply(ce_fit, 2, mean)
+```
+
+```{r merged data}
+current_path <- getActiveDocumentContext()$path
+setwd(dirname(current_path))
+
+load("bw_adat.RData")
+names(adat)
+```
+
+
+```{r compute smrs}
+dp_smr <- dp_fit_mean/adat$exp_counts_dp
+dp0527_smr <- dp0527_fit_mean/adat$exp_counts_dp0527
+ce_smr <- ce_fit_mean/adat$exp_counts_ce
+```
+
+```{r popuplation}
+# looking at boxplots of the bias
+pop <- adat[1:3]
+smr_bias <- cbind(pop, dp_smr, dp0527_smr, ce_smr) %>% mutate(dp_smr_bias = dp_smr - ce_smr) %>% mutate(dp0527_smr_bias = dp0527_smr - ce_smr) 
+smr_bias_box <- smr_bias[,c("GEOID", "race", "dp_smr_bias","dp0527_smr_bias")]
+library(scales)
+ggplot(melt(smr_bias_box), aes(x=race,y=value, fill=variable)) + 
+    geom_boxplot()+ylab("SMR Bias")+ 
+  #scale_y_continuous(lim=c(-1,2))+
+  ggtitle("SMR bias for NHW/Black")
+
+
+data_pop <- aggregate(pop$exp_counts_ce, by=list(GEOID=pop$GEOID), FUN=sum)
+quantile(data_pop$x, 1/4) # 3.974952 
+
+# aggregate and get the fitted value
+pop_fit <- cbind(adat[1:5], ce_fit_mean, dp_fit_mean, dp0527_fit_mean)
+pop_fit_agg <-  aggregate(cbind(pop_fit$exp_counts_ce, pop_fit$exp_counts_dp, pop_fit$exp_counts_dp0527, pop_fit$ce_fit_mean, pop_fit$dp_fit_mean, pop_fit$dp0527_fit_mean), by=list(GEOID=pop_fit$GEOID), FUN=sum)
+names(pop_fit_agg) <- c("GEOID", "exp_counts_ce","exp_counts_dp", "exp_counts_dp0527", "ce_fit_mean", "dp_fit_mean", "dp0527_fit_mean")
+# switch the aggregated fitted to SMR and also label them small/large population
+
+pop_fit_agg <-  pop_fit_agg %>% 
+  mutate(size=ifelse(exp_counts_ce<=quantile(pop_fit_agg$exp_counts_ce, 1/4), 
+                                                   "small", "large")) %>%
+  mutate(pop_ce_smr = ce_fit_mean/exp_counts_ce, pop_dp_smr = dp_fit_mean/exp_counts_dp, pop_dp0527_smr = dp0527_fit_mean/exp_counts_dp0527)
+
+pop_fit_agg_bias <- pop_fit_agg[,-(2:7)] %>% mutate(pop_smr_bias_dp = pop_dp_smr-pop_ce_smr, pop_smr_bias_dp0527 = pop_dp0527_smr-pop_ce_smr)
+
+smr_bias_popsize <- melt(pop_fit_agg_bias[,-(3:5)])
+ggplot(smr_bias_popsize, aes(x=size,y=value, fill=variable)) + 
+#  scale_y_continuous(lim=c(-1,2))+ 
+    geom_boxplot()+ylab("SMR bias")+
+  ggtitle("SMR bias for different population sizes")
+
+```
+
+```{r scatter plot SMR bias vs ce_exp_counts}
+smr_bias_ce <- smr_bias[,c("GEOID", "race","exp_counts_ce", "dp_smr_bias","dp0527_smr_bias")]
+
+smr_bias_ce_long <- melt(smr_bias_ce, id=c("GEOID", "race", "exp_counts_ce"))
+smr_bias_ce_scatter <- ggplot(data = smr_bias_ce_long, mapping = aes(x = exp_counts_ce, y = value, color=race)) + geom_point(alpha=0.1) + ylab("SMR bias")+scale_color_brewer(palette="Dark2")+ scale_x_sqrt()
+smr_bias_ce_scatter + facet_wrap(~variable) + 
+  geom_smooth(method=lm, se=FALSE, fullrange=TRUE) + ggtitle("SMR bias vs ce_exp_counts")
+
+
+smr_bias_ce_scatter_wo_oulier <- ggplot(data = smr_bias_ce_long[smr_bias_ce_long$GEOID!="25025980101",], mapping = aes(x = exp_counts_ce, y = value, color=race)) + geom_point(alpha=0.3) + ylab("SMR bias")+scale_color_brewer(palette="Dark2")+ scale_x_sqrt()
+smr_bias_ce_scatter_wo_oulier + facet_wrap(~variable) + 
+  geom_smooth(method=lm, se=FALSE, fullrange=TRUE)+ ggtitle("SMR bias vs ce_exp_counts")
+
+```
+
+```{r scatter plot SMR bias vs exp_counts bias}
+
+```
+
+
+
+
+
+
+```{r MAPE boxplot}
+# looking at boxplots of the mean absolute percentage error of the SMRs for each CT/race group (relative to ce)
+dp0527_smr_mape <- abs((ce_smr - dp0527_smr)/ce_smr) #2877
+dp_smr_mape <- abs((ce_smr - dp_smr)/ce_smr) #2877
+
+smr_mape <- cbind(adat[1:3], dp_smr_mape, dp0527_smr_mape) 
+smr_mape_box <- smr_mape[,c("GEOID", "race", "dp_smr_mape","dp0527_smr_mape")]
+
+smr_mape_bw <- ggplot(melt(smr_mape_box), aes(x=race,y=value, fill=variable)) + 
+    geom_boxplot() + scale_y_log10()+ylab("MAPE(log10 scale)") + ggtitle("MAPE for SMRs between NHW & Black")
+smr_mape_bw 
+mean(smr_mape_box[which(smr_mape_box$race=='white'),]$dp_smr_mape) #0.1072015
+mean(smr_mape_box[which(smr_mape_box$race=='black'),]$dp_smr_mape) #0.1072015
+mean(smr_mape_box[which(smr_mape_box$race=='white'),]$dp0527_smr_mape) #0.09565349
+mean(smr_mape_box[which(smr_mape_box$race=='black'),]$dp0527_smr_mape) #0.08519634
+
+pop_fit_agg_mape  <- pop_fit_agg[,-(2:7)] %>% mutate(pop_smr_mape_dp = abs((pop_dp_smr-pop_ce_smr)/pop_ce_smr), pop_smr_mape_dp0527 = abs((pop_dp0527_smr-pop_ce_smr)/pop_ce_smr))
+
+smr_mape_popsize <- melt(pop_fit_agg_mape[,-(3:5)])
+
+smr_mape_size_plot <- ggplot(smr_mape_popsize, aes(x=size,y=value, fill=variable)) + 
+    geom_boxplot() + scale_y_log10() +ylab("MAPE(log10 scale)")+ ggtitle("MAPE for SMRs between large & small populations")
+smr_mape_size_plot
+mean(pop_fit_agg_mape[which(pop_fit_agg_mape$size=="large"),]$pop_smr_mape_dp) #0.0958827
+mean(pop_fit_agg_mape[which(pop_fit_agg_mape$size=="small"),]$pop_smr_mape_dp) #0.1249155
+mean(pop_fit_agg_mape[which(pop_fit_agg_mape$size=="large"),]$pop_smr_mape_dp0527) #0.09053365
+mean(pop_fit_agg_mape[which(pop_fit_agg_mape$size=="small"),]$pop_smr_mape_dp0527) #0.1037003
+#mape<-cowplot::plot_grid(smr_mape_bw,smr_mape_size_plot,ncol=1)
+# pdf('mape.pdf',width=7,height=6)
+# print(mape)
+```
+
+```{r}
+# mape based on simulation SMR from census & dp
+dp0527_fit_mape100 <- apply(abs((ce_fit/adat$exp_counts_ce - dp0527_fit/adat$exp_counts_dp0527)/ce_fit/adat$exp_counts_ce), 1, mean) # 1 indicates rows
+dp_fit_mape100 <- apply(abs((ce_fit/adat$exp_counts_ce - dp_fit/adat$exp_counts_dp)/ce_fit/adat$exp_counts_ce), 1, mean) # 1 indicates rows
+smr100 <- cbind(dp_fit_mape100, dp0527_fit_mape100)
+mape100 <- ggplot(melt(smr100), aes(x=Var2, y=value, fill=value)) +
+  geom_boxplot() +xlab("dp data source") + ylab("mape across all CT")
+mape100
+```
+
+```{r}
+ce_fit_CT <- cbind(adat[2], t(ce_fit))
+ce_fit_CT_w <- ce_fit_CT[which(ce_fit_CT$race=='white'),]
+ce_fit_CT_b <- ce_fit_CT[which(ce_fit_CT$race=='black'),]
+dp_fit_CT <- cbind(adat[2], t(dp_fit))
+dp_fit_CT_w <- dp_fit_CT[which(dp_fit_CT$race=='white'),]
+dp_fit_CT_b <- dp_fit_CT[which(dp_fit_CT$race=='black'),]
+dp0527_fit_CT <- cbind(adat[2], t(dp0527_fit))
+dp0527_fit_CT_w <- dp0527_fit_CT[which(dp0527_fit_CT$race=='white'),]
+dp0527_fit_CT_b <- dp0527_fit_CT[which(dp0527_fit_CT$race=='black'),]
+
+exp_counts_ce_w <- adat[which(adat$race=='white'),]$exp_counts_ce
+exp_counts_ce_b <- adat[which(adat$race=='black'),]$exp_counts_ce
+exp_counts_dp_w <- adat[which(adat$race=='white'),]$exp_counts_dp
+exp_counts_dp_b <- adat[which(adat$race=='black'),]$exp_counts_dp
+exp_counts_dp0527_w <- adat[which(adat$race=='white'),]$exp_counts_dp0527
+exp_counts_dp0527_b <- adat[which(adat$race=='black'),]$exp_counts_dp0527
+
+dp0527_fit_mape100_w <- apply(abs((ce_fit_CT_w[,-1]/exp_counts_ce_w - dp0527_fit_CT_w[,-1]/exp_counts_dp0527_w)/(ce_fit_CT_w[,-1]/exp_counts_ce_w)), 2, mean)
+
+dp0527_fit_mape100_b <- apply(abs((ce_fit_CT_b[,-1]/exp_counts_ce_b - dp0527_fit_CT_b[,-1]/exp_counts_dp0527_b)/(ce_fit_CT_b[,-1]/exp_counts_ce_b)), 2, mean)
+
+dp_fit_mape100_w <- apply(abs((ce_fit_CT_w[,-1]/exp_counts_ce_w - dp_fit_CT_w[,-1]/exp_counts_dp_w)/(ce_fit_CT_w[,-1]/exp_counts_ce_w)), 2, mean)
+
+dp_fit_mape100_b <- apply(abs((ce_fit_CT_b[,-1]/exp_counts_ce_b - dp_fit_CT_b[,-1]/exp_counts_dp_b)/(ce_fit_CT_b[,-1]/exp_counts_ce_b)), 2, mean)
+
+mape_bw_box <- melt(cbind(dp0527_fit_mape100_w, dp0527_fit_mape100_b, dp_fit_mape100_w, dp_fit_mape100_b)) %>% separate(Var2,into=c("sources","race"),sep="_fit_mape100_") %>% ggplot(aes(x=race,y=value, fill=sources)) +
+geom_boxplot() + ylab("MAPE")+ggtitle("Separate race boxplot SMRs across CT for b/w")
+mape_bw_box
+
+```
+
+```{r}
+dp0527_exp_mape <- abs((adat$exp_counts_ce - adat$exp_counts_dp0527)/adat$exp_counts_ce) 
+# 2 indicates columns
+dp_exp_mape <- abs((adat$exp_counts_ce - adat$exp_counts_dp)/adat$exp_counts_ce)
+mape_exp <- cbind(adat[1:3], dp_exp_mape, dp0527_exp_mape) 
+mape_box_exp <- melt(mape_exp[,c("GEOID", "race", "dp_exp_mape","dp0527_exp_mape")]) %>% ggplot(aes(x=race,y=value, fill=variable)) +  geom_boxplot() + scale_y_log10()+ylab("MAPE(log10 scale)")
+mape_box_exp
+```
+
+
+
+```{r scatter plot dp/dp0527 vs ce}
+# scatter plot of SMRs (ce vs. dp)
+dp_w_GEOID <- cbind(adat[1:2], dp_smr, ce_smr) 
+dp0527_w_GEOID <- cbind(adat[1:2], dp0527_smr, ce_smr) 
+dp2_w_GEOID <- cbind(adat[1:2], dp_smr, dp0527_smr, ce_smr) 
+
+dp_scatter <- ggplot(data = dp_w_GEOID, mapping = aes(x = ce_smr, y = dp_smr)) + geom_point()
+dp_scatter <- dp_scatter + facet_wrap(~race, scales="free") + geom_abline(colour="red")
+
+dp0527_scatter <- ggplot(data = dp0527_w_GEOID, mapping = aes(x = ce_smr, y = dp0527_smr)) + geom_point()
+dp0527_scatter <- dp0527_scatter + facet_wrap(~race, scales="free") + geom_abline(colour="red")
+
+dp_scatter +ggtitle("scatter plot of SMRs (ce vs. dp)")
+dp0527_scatter+ggtitle("scatter plot of SMRs (ce vs. dp0527)")
+
+dp_scatter2 <- ggplot(dp2_w_GEOID, aes(x=ce_smr, y=dp_smr, color=race)) +
+  geom_point(alpha=0.1) + 
+  geom_smooth(method=lm, se=FALSE, fullrange=TRUE)
+# Use brewer color palettes
+dp_scatter2 +scale_color_brewer(palette="Dark2")+ggtitle("scatter plot of SMRs (ce vs. dp)")
+
+dp0527_scatter2 <- ggplot(dp2_w_GEOID, aes(x=ce_smr, y=dp0527_smr, color=race)) +
+  geom_point(alpha=0.1) + 
+  geom_smooth(method=lm, se=FALSE, fullrange=TRUE)
+# Use brewer color palettes
+dp0527_scatter2 +scale_color_brewer(palette="Dark2")+ggtitle("scatter plot of SMRs (ce vs. dp0527)")
+
+
+
+dp_ce3 <- melt(dp2_w_GEOID, id=c("GEOID", "race", "ce_smr"))
+dp_ce3_scatter <- ggplot(data = dp_ce3, mapping = aes(x = ce_smr, y = value, color=variable)) + geom_point(alpha=0.4) + ylab("dp_smr")
+dp_ce3_scatter + facet_wrap(~race) + geom_abline(colour="red")+ggtitle("Scatter plot of SMRs ")
+
+
+dp_ce_scatter2 <- ggplot(data = dp_ce3, mapping = aes(x = ce_smr, y = value, color=race)) + geom_point(alpha=0.3) + ylab("dp_smr")+scale_color_brewer(palette="Dark2")
+dp_ce_scatter2 + facet_wrap(~variable) + 
+  geom_smooth(method=lm, se=FALSE, fullrange=TRUE)+ geom_abline(colour="grey")
+```
+
+
+
+
+
+Dig out more in outliers
+
+```{r outliers dectection}
+smr_bias[which(smr_bias$dp_smr>8|smr_bias$dp0527_smr>8),]
+
+```
+
+
+```{r scatter plot dp/dp0527 vs ce}
+# scatter plot of SMRs (ce vs. dp)
+dp_scatter_no_out <- ggplot(data = dp_w_GEOID[dp_w_GEOID$GEOID!="25025980101",], mapping = aes(x = ce_smr, y = dp_smr)) + geom_point()
+dp_scatter <- dp_scatter_no_out + facet_wrap(~race, scales="free") + geom_abline(colour="red")
+
+dp0527_scatter <- ggplot(data = dp0527_w_GEOID[dp_w_GEOID$GEOID!="25025980101",], mapping = aes(x = ce_smr, y = dp0527_smr)) + geom_point()
+dp0527_scatter <- dp0527_scatter + facet_wrap(~race, scales="free") + geom_abline(colour="red")
+
+dp_scatter +ggtitle("scatter plot of SMRs (ce vs. dp)")
+dp0527_scatter+ggtitle("scatter plot of SMRs (ce vs. dp0527)")
+
+dp_scatter2 <- ggplot(dp2_w_GEOID[dp_w_GEOID$GEOID!="25025980101",], aes(x=ce_smr, y=dp_smr, color=race)) +
+  geom_point(alpha=0.1) + 
+  geom_smooth(method=lm, se=FALSE, fullrange=TRUE)
+# Use brewer color palettes
+dp_scatter2 +scale_color_brewer(palette="Dark2")+ggtitle("scatter plot of SMRs (ce vs. dp)")
+
+dp0527_scatter2 <- ggplot(dp2_w_GEOID[dp_w_GEOID$GEOID!="25025980101",], aes(x=ce_smr, y=dp0527_smr, color=race)) +
+  geom_point(alpha=0.1) + 
+  geom_smooth(method=lm, se=FALSE, fullrange=TRUE)
+# Use brewer color palettes
+dp0527_scatter2 +scale_color_brewer(palette="Dark2")+ggtitle("scatter plot of SMRs (ce vs. dp0527)")
+
+
+
+dp_ce3 <- melt(dp2_w_GEOID, id=c("GEOID", "race", "ce_smr"))
+dp_ce3_scatter <- ggplot(data = dp_ce3[dp_w_GEOID$GEOID!="25025980101",], mapping = aes(x = ce_smr, y = value, color=variable)) + geom_point(alpha=0.4) + ylab("dp_smr")
+dp_ce3_scatter + facet_wrap(~race) + geom_abline(colour="red")+ggtitle("Scatter plot of SMRs ")
+
+
+dp_ce_scatter2 <- ggplot(data = dp_ce3[dp_w_GEOID$GEOID!="25025980101",], mapping = aes(x = ce_smr, y = value, color=race)) + geom_point(alpha=0.3) + ylab("dp_smr")+scale_color_brewer(palette="Dark2")
+dp_ce_scatter2 + facet_wrap(~variable) + 
+  geom_smooth(method=lm, se=FALSE, fullrange=TRUE)+ geom_abline(colour="grey")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+####################################
+Below are the fitted value plots
+####################################
+
+```{r popuplation}
+# looking at boxplots of the bias
+pop <- cbind(adat[1:3], dp_fit_mean, dp0527_fit_mean, ce_fit_mean) %>% mutate(dp_bias = dp_fit_mean - ce_fit_mean) %>% mutate(dp0527_bias = dp0527_fit_mean - ce_fit_mean) 
+pop_box <- pop[,c("GEOID", "race", "dp_bias","dp0527_bias")]
+
+ggplot(melt(pop_box), aes(x=race,y=value, fill=variable)) + 
+    geom_boxplot()
+
+data_pop <- aggregate(pop$exp_counts_ce, by=list(GEOID=pop$GEOID), FUN=sum)
+quantile(data_pop$x, 1/4) # 3.974952 
+pop_box2 <- merge(pop[,c("GEOID", "race", "dp_bias","dp0527_bias")], data_pop) %>% mutate(size=ifelse(x<=quantile(data_pop$x, 1/4), "small", "large"))
+box2 <- melt(pop_box2[,-5])
+ggplot(box2, aes(x=size,y=value, fill=variable)) + 
+    geom_boxplot()
+
+```
+
+
+
+
+
+
+
+
+```{r MAPE boxplot}
+# looking at boxplots of the mean absolute percentage error of the SMRs for each CT/race group (relative to ce)
+dp0527_fit_mape <- apply(abs((ce_fit - dp0527_fit)/ce_fit), 2, mean) # 2 indicates columns
+dp_fit_mape <- apply(abs((ce_fit - dp_fit)/ce_fit), 2, mean)
+
+pop1 <- cbind(adat[1:3], dp_fit_mape, dp0527_fit_mape) 
+pop1_box <- pop1[,c("GEOID", "race", "dp_fit_mape","dp0527_fit_mape")]
+
+mape1 <- ggplot(melt(pop1_box), aes(x=race,y=value, fill=variable)) + 
+    geom_boxplot() + scale_y_log10()+ylab("MAPE(log10 scale)")
+
+data_pop1 <- aggregate(pop1$exp_counts_ce, by=list(GEOID=pop1$GEOID), FUN=sum)
+quantile(data_pop1$x, 1/4) # 3.974952 
+pop_box3 <- merge(pop1[,c("GEOID", "race", "dp_fit_mape","dp0527_fit_mape")], data_pop1) %>% mutate(size=ifelse(x<=quantile(data_pop1$x, 1/4), "small", "large"))
+box3 <- melt(pop_box3[,-5])
+mape2 <- ggplot(box3, aes(x=size,y=value, fill=variable)) + 
+    geom_boxplot() + scale_y_log10() +ylab("MAPE(log10 scale)")
+
+mape<-cowplot::plot_grid(mape1,mape2,ncol=1)
+pdf('mape.pdf',width=7,height=6)
+print(mape)
+```
+
+```{r}
+# mape based on simulation SMR from census & dp
+dp0527_fit_mape100 <- apply(abs((ce_fit - dp0527_fit)/ce_fit), 1, mean) # 1 indicates rows
+dp_fit_mape100 <- apply(abs((ce_fit - dp_fit)/ce_fit), 1, mean) # 1 indicates rows
+smr100 <- cbind(dp_fit_mape100, dp0527_fit_mape100)
+mape100 <- ggplot(melt(smr100), aes(x=Var2, y=value, fill=value)) +
+  geom_boxplot() +xlab("dp data source") + ylab("mape across all CT")
+mape100
+```
+
+```{r}
+ce_fit_CT <- cbind(adat[2], t(ce_fit))
+ce_fit_CT_w <- ce_fit_CT[which(ce_fit_CT$race=='white'),]
+ce_fit_CT_b <- ce_fit_CT[which(ce_fit_CT$race=='black'),]
+dp_fit_CT <- cbind(adat[2], t(dp_fit))
+dp_fit_CT_w <- dp_fit_CT[which(dp_fit_CT$race=='white'),]
+dp_fit_CT_b <- dp_fit_CT[which(dp_fit_CT$race=='black'),]
+dp0527_fit_CT <- cbind(adat[2], t(dp0527_fit))
+dp0527_fit_CT_w <- dp0527_fit_CT[which(dp0527_fit_CT$race=='white'),]
+dp0527_fit_CT_b <- dp0527_fit_CT[which(dp0527_fit_CT$race=='black'),]
+dp0527_fit_mape100_w <- apply(abs((ce_fit_CT_w[,-1] - dp0527_fit_CT_w[,-1])/ce_fit_CT_w[,-1]), 2, mean)
+dp0527_fit_mape100_b <- apply(abs((ce_fit_CT_b[,-1] - dp0527_fit_CT_b[,-1])/ce_fit_CT_b[,-1]), 2, mean)
+dp_fit_mape100_w <- apply(abs((ce_fit_CT_w[,-1] - dp_fit_CT_w[,-1])/ce_fit_CT_w[,-1]), 2, mean)
+dp_fit_mape100_b <- apply(abs((ce_fit_CT_b[,-1] - dp_fit_CT_b[,-1])/ce_fit_CT_b[,-1]), 2, mean)
+
+mape_bw_box <- melt(cbind(dp0527_fit_mape100_w, dp0527_fit_mape100_b, dp_fit_mape100_w, dp_fit_mape100_b)) %>% separate(Var2,into=c("sources","race"),sep="_fit_mape100_") %>% ggplot(aes(x=race,y=value, fill=sources)) +
+geom_boxplot() + ylab("MAPE")
+mape_bw_box
+
+```
+
+```{r}
+dp0527_exp_mape <- abs((adat$exp_counts_ce - adat$exp_counts_dp0527)/adat$exp_counts_ce) 
+# 2 indicates columns
+dp_exp_mape <- abs((adat$exp_counts_ce - adat$exp_counts_dp)/adat$exp_counts_ce)
+mape_exp <- cbind(adat[1:3], dp_exp_mape, dp0527_exp_mape) 
+mape_box_exp <- melt(mape_exp[,c("GEOID", "race", "dp_exp_mape","dp0527_exp_mape")]) %>% ggplot(aes(x=race,y=value, fill=variable)) +  geom_boxplot() + scale_y_log10()+ylab("MAPE(log10 scale)")
+mape_box_exp
+```
+
+
+
+```{r scatter plot dp/dp0527 vs ce}
+# scatter plot of fitted values (ce vs. dp)
+dp_w_GEOID <- cbind(adat[1:2], dp_fit_mean, ce_fit_mean) 
+dp0527_w_GEOID <- cbind(adat[1:2], dp0527_fit_mean, ce_fit_mean) 
+dp2_w_GEOID <- cbind(adat[1:2], dp_fit_mean, dp0527_fit_mean, ce_fit_mean) 
+
+dp_scatter <- ggplot(data = dp_w_GEOID, mapping = aes(x = ce_fit_mean, y = dp_fit_mean)) + geom_point()
+dp_scatter <- dp_scatter + facet_wrap(~race, scales="free") + geom_abline(colour="red")
+
+dp0527_scatter <- ggplot(data = dp0527_w_GEOID, mapping = aes(x = ce_fit_mean, y = dp0527_fit_mean)) + geom_point()
+dp0527_scatter <- dp0527_scatter + facet_wrap(~race, scales="free") + geom_abline(colour="red")
+
+dp_scatter
+dp0527_scatter
+
+dp_scatter2 <- ggplot(dp2_w_GEOID, aes(x=ce_fit_mean, y=dp_fit_mean, color=race)) +
+  geom_point(alpha=0.1) + 
+  geom_smooth(method=lm, se=FALSE, fullrange=TRUE)
+# Use brewer color palettes
+dp_scatter2 +scale_color_brewer(palette="Dark2")
+
+dp0527_scatter <- ggplot(dp2_w_GEOID, aes(x=ce_fit_mean, y=dp0527_fit_mean, color=race)) +
+  geom_point(alpha=0.1) + 
+  geom_smooth(method=lm, se=FALSE, fullrange=TRUE)
+# Use brewer color palettes
+dp0527_scatter +scale_color_brewer(palette="Dark2")
+
+
+dp_ce_scatter2 <- ggplot(data = dp_ce3, mapping = aes(x = ce_fit_mean, y = value, color=race)) + geom_point(alpha=0.3) + ylab("dp_fit_mean")+scale_color_brewer(palette="Dark2")
+dp_ce_scatter2 + facet_wrap(~variable) + 
+  geom_smooth(method=lm, se=FALSE, fullrange=TRUE)+ geom_abline(colour="grey")
+
+
+
+
+dp_ce3 <- melt(dp2_w_GEOID, id=c("GEOID", "race", "ce_fit_mean"))
+dp_ce3_scatter <- ggplot(data = dp_ce3, mapping = aes(x = ce_fit_mean, y = value, color=variable)) + geom_point(alpha=0.4) + ylab("dp_fit_mean")
+dp_ce3_scatter + facet_wrap(~race) + geom_abline(colour="red")
+```
+
+```{r scatter plot dp/dp0527 P vs ce Ptrue}
+Ptrue <- matrix(adat$exp_counts_ce)
+P_dp <- matrix(adat$exp_counts_dp)
+P_dp0527 <- matrix(adat$exp_counts_dp0527)
+
+# scatter plot of P matrix (ce vs. dp)
+P_dp_w_GEOID <- cbind(adat[1:2], P_dp, Ptrue) 
+P_dp0527_w_GEOID <- cbind(adat[1:2], P_dp0527, Ptrue) 
+P2_w_GEOID <- cbind(adat[1:2], P_dp, P_dp0527, Ptrue) 
+
+P_dp_scatter <- ggplot(data = P_dp_w_GEOID, mapping = aes(x = Ptrue, y = P_dp)) + geom_point()
+P_dp_scatter + facet_wrap(~race, scales="free") + geom_abline(colour="red")
+
+P_dp0527_scatter <- ggplot(data = P_dp0527_w_GEOID, mapping = aes(x = Ptrue, y = P_dp0527)) + geom_point()
+P_dp0527_scatter + facet_wrap(~race, scales="free") + geom_abline(colour="red")
+
+
+
+P_dp_scatter2 <- ggplot(P2_w_GEOID, aes(x=Ptrue, y=P_dp, color=race)) +
+  geom_point(alpha=0.1) + 
+  geom_smooth(method=lm, se=FALSE, fullrange=TRUE)
+# Use brewer color palettes
+P_dp_scatter2 +scale_color_brewer(palette="Dark2")
+
+P_dp0527_scatter2 <- ggplot(P2_w_GEOID, aes(x=Ptrue, y=P_dp0527, color=race)) +
+  geom_point(alpha=0.1) + 
+  geom_smooth(method=lm, se=FALSE, fullrange=TRUE)
+# Use brewer color palettes
+P_dp0527_scatter2 +scale_color_brewer(palette="Dark2")
+
+P_dp_ce <- melt(P2_w_GEOID, id=c("GEOID", "race", "Ptrue"))
+P_dp_ce_scatter <- ggplot(data = P_dp_ce, mapping = aes(x = Ptrue, y = value, color=variable)) + geom_point(alpha=0.3) + ylab("P_dp")
+P_dp_ce_scatter + facet_wrap(~race) + geom_abline(colour="red")
+
+
+P_dp_ce_scatter2 <- ggplot(data = P_dp_ce, mapping = aes(x = Ptrue, y = value, color=race)) + geom_point(alpha=0.3) + ylab("P_dp")+scale_color_brewer(palette="Dark2")
+P_dp_ce_scatter2 + facet_wrap(~variable) + geom_abline(colour="grey")
+
+
+
+
+```
+

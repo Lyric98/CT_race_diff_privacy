@@ -228,7 +228,7 @@ for (xx in 1:reps){
   ## FIT STANDARD SPATIAL CAR  MODEL  ##
   ######################################
   adat$Y<-Y
-  adat$offs<-log(lambda*Ptrue)
+  adat$offs<-log(lambda*Ptrue) #Ptrue<-matrix(adat$exp_counts_ce)
   results_cars<-S.CARmultilevel(Y~bw_ind+acs_pov_pct+offset(offs),family="poisson",data=adat,
                                 ind.area=as.numeric(as.factor(adat$GEOID)),
                                 ind.re=as.factor(1:N),

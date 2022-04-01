@@ -1,0 +1,8 @@
+# Data
+*.csv
+*.RData
+*.icloud
+.RData
+
+# boston_city fold
+boston_ct/*

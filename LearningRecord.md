@@ -77,6 +77,12 @@ git config --global --list
 git config --system --list
 ```
 
+
+Github 标准 Fork & Pull Request 流程
+https://aaronflower.github.io/essays/github-fork-pull-workflow.html
+
+
+
 # 打开未知开发者app
 `sudo spctl --master-disable`
 # Carla 记录

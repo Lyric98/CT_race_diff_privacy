@@ -171,6 +171,8 @@ title可加可不加
 环境
 ```
 conda activate RL
+
+conda env list 查看已有环境list
 ```
 
 传输文件

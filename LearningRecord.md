@@ -170,6 +170,8 @@ title可加可不加
 
 环境
 ```
+conda create -n your_env_name python=x.x Python创建虚拟环境
+
 conda activate RL
 
 conda env list 查看已有环境list

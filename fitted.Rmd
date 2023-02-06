@@ -107,7 +107,18 @@ smr_bias_ce_scatter_wo_oulier + facet_wrap(~variable) +
 
 ```
 
-```{r scatter plot SMR bias vs exp_counts bias}
+```{r scatter plot SMR bias vs ce_exp_counts (only black)}
+smr_bias_ce_black <- smr_bias[,c("GEOID", "race","exp_counts_ce", "dp_smr_bias","dp0527_smr_bias")] %>% filter(race=='black')
+#[which(smr_mape_box$race=='white'),]
+smr_bias_ce_black_long <- melt(smr_bias_ce_black, id=c("GEOID", "race", "exp_counts_ce"))
+smr_bias_ce_black_scatter <- ggplot(data = smr_bias_ce_black_long, mapping = aes(x = exp_counts_ce, y = value, color=race)) + geom_point(alpha=0.1) + ylab("SMR bias")+scale_color_brewer(palette="Dark2")+ scale_x_sqrt()
+smr_bias_ce_black_scatter + facet_wrap(~variable) + 
+  geom_smooth(method=lm, se=FALSE, fullrange=TRUE) + ggtitle("SMR bias vs ce_exp_counts(only black)")
+
+
+smr_bias_ce_black_scatter_wo_oulier <- ggplot(data = smr_bias_ce_black_long[smr_bias_ce_black_long$GEOID!="25025980101",], mapping = aes(x = exp_counts_ce, y = value, color=race)) + geom_point(alpha=0.3) + ylab("SMR bias")+scale_color_brewer(palette="Dark2")+ scale_x_sqrt()
+smr_bias_ce_black_scatter_wo_oulier + facet_wrap(~variable) + 
+  geom_smooth(method=lm, se=FALSE, fullrange=TRUE)+ ggtitle("SMR bias vs ce_exp_counts(only black)")
 
 ```
 
@@ -288,15 +299,149 @@ dp_ce_scatter2 + facet_wrap(~variable) +
 ```
 
 
+```{r sim_from_cluster2}
+setwd("~/Desktop/Research/Rachel/CT_race_diff_privacy/results_manu")
+load("simnum4.RData")
+dp0527_fit <- cars
+dp0527_fit_mean <- apply(dp0527_fit, 2, mean)
+load("simnum5.RData")
+dp_fit <- cars
+dp_fit_mean <- apply(dp_fit, 2, mean)
+load("simnum6.RData")
+ce_fit <- cars
+ce_fit_mean <- apply(ce_fit, 2, mean)
+
+load("exp_theta4.RData")
+true_smrs_dp20 = exp_theta
+load("exp_theta5.RData")
+true_smrs_dp19 = exp_theta
+load("exp_theta6.RData")
+true_smrs_ce = exp_theta
+
+# compute smrdps
+current_path <- getActiveDocumentContext()$path
+setwd(dirname(current_path))
+load("bw_adat.RData")
+
+# old dp
+exp_counts_dp19 = data.frame(t(matrix(rep(adat$exp_counts_dp,100),c(length(adat$exp_counts_dp),100))))
+smrdp19 = dp_fit/exp_counts_dp19
+mape_ij_dp19 = colSums(abs((smrdp19-true_smrs_dp19)/true_smrs_dp19))/100
+# 2020-05-27 dp
+exp_counts_dp20 = data.frame(t(matrix(rep(adat$exp_counts_dp0527,100),c(length(adat$exp_counts_dp0527),100))))
+smrdp20 = dp0527_fit/exp_counts_dp20
+mape_ij_dp20 = colSums(abs((smrdp20-true_smrs_dp20)/true_smrs_dp20))/100
+# ce
+exp_counts_ce = data.frame(t(matrix(rep(adat$exp_counts_ce,100),c(length(adat$exp_counts_ce),100))))
+smrce = ce_fit/exp_counts_ce
+mape_ij_ce = colSums(abs((smrce-true_smrs_ce)/true_smrs_ce))/100
+
+
+```
+
+
+```{r MAPE boxplot2}
+# looking at boxplots of the mean absolute percentage error of the SMRs for each CT/race group (relative to ce)
+smr_mape <- cbind(adat[1:2], mape_ij_ce, mape_ij_dp19, mape_ij_dp20) 
+smr_mape_box <- smr_mape[,c("GEOID", "race", "mape_ij_ce","mape_ij_dp19","mape_ij_dp20")]
+names(smr_mape_box) <- c("GEOID", "race", "DC","DP19","DP20")
+
+smr_mape_bw_log10 <- ggplot(melt(smr_mape_box), aes(x=race,y=value, fill=variable)) + 
+    geom_boxplot() + scale_y_log10()+ylab("MAPE(log10 scale)") + ggtitle("MAPE for SMRs between NHW & Black")
+smr_mape_bw_log10
+
+smr_mape_bw <- ggplot(melt(smr_mape_box), aes(x=race,y=value, fill=variable)) + 
+    geom_boxplot()+ylab("MAPE") + ggtitle("MAPE for SMRs between NHW & Black")
+smr_mape_bw
+
+melt_mape <- melt(smr_mape_box)
+names(melt_mape)<-c("GEOID","race","Data","value")
+smr_mape_bw_woo <- ggplot(melt_mape, aes(x=race,y=value, fill=Data)) + 
+    geom_boxplot(outlier.shape = NA)+ylab("MAPE") + coord_cartesian(ylim=c(0, 1.2))+ ylab(NULL)+ggtitle("")
+smr_mape_bw_woo
+```
 
 
 
 
 
+```{r histogram of the exp(theta) by race}
+dim(true_smrs_dp20)
+hist_exp_theta <- cbind(adat[2],c(t(true_smrs_dp19)))
+names(hist_exp_theta) <- c("race","exp_theta")
+
+p <- ggplot(data = hist_exp_theta, mapping = aes(
+  x = exp_theta))+ scale_x_log10() +ggtitle("19 DP simulation set") +xlab("exp_theta(log10 scale)")
+p + geom_histogram() +
+  facet_wrap(~ race) 
+```
+
+analogous plots for the bias (rather than MAPE) comparing census/dp/dp0527 to exp(theta)
+
+```{r bias boxplot2}
+# old dp
+bias_ij_dp19 = colSums(smrdp19-true_smrs_dp19)/100
+# 2020-05-27 dp
+bias_ij_dp20 = colSums(smrdp20-true_smrs_dp20)/100
+# ce
+bias_ij_ce = colSums(smrce-true_smrs_ce)/100
+
+# looking at boxplots of the mean absolute percentage error of the SMRs for each CT/race group (relative to ce)
+smr_bias <- cbind(adat[1:2], bias_ij_ce, bias_ij_dp19, bias_ij_dp20) 
+smr_bias_box <- smr_bias[,c("GEOID", "race", "bias_ij_ce","bias_ij_dp19","bias_ij_dp20")]
+
+smr_bias_bw <- ggplot(melt(smr_bias_box), aes(x=race,y=value, fill=variable)) + 
+    geom_boxplot()+ylab("Bias") + ggtitle("Bias for SMRs between NHW & Black")
+smr_bias_bw
+
+smr_bias_bw_woo <- ggplot(melt(smr_bias_box), aes(x=race,y=value, fill=variable)) + 
+    geom_boxplot(outlier.shape = NA)+ylab("Bias")+ coord_cartesian(ylim=c(-0.5, 0.8))+ ylab(NULL) 
+smr_bias_bw_woo
+
+require(cowplot)
+library(grid)
+library(gridExtra)
+
+legend <- cowplot::get_legend(
+  # create some space to the left of the legend
+  smr_mape_bw_woo+ theme(legend.box.margin = margin(0, 0, 0, 12)))
+
+# add the legend to the row we made earlier. Give it one-third of 
+# the width of one plot (via rel_widths).
 
 
+prow <- plot_grid(
+  smr_bias_bw_woo+ theme(legend.position="none"),
+  smr_mape_bw_woo+ theme(legend.position="none"),
+  align = 'vh',
+  labels = c("Bias", "MAPE"),
+  hjust = -1,
+  nrow = 1
+)
+prow
+x.grob <- textGrob("Race    ")
+smr_mape_bias <-cowplot::plot_grid(prow,legend, rel_widths = c(3, .4))
+smr_mape_bias
+#grid.arrange(arrangeGrob(smr_mape_bias, bottom = x.grob))
+pdf('smr_mape_bias.pdf',width=7,height=6)
+print(smr_mape_bias)
+```
 
 
+```{r smr_bias_mape}
+require(reshape)
+smr_bias_mape <- cbind(adat[1:2], bias_ij_ce, bias_ij_dp19, bias_ij_dp20, mape_ij_ce, mape_ij_dp19, mape_ij_dp20) 
+names(smr_bias_mape) <- c("GEOID", "race","Bias_ij_CE","Bias_ij_DP19","Bias_ij_DP20","MAPE_ij_CE","MAPE_ij_DP19","MAPE_ij_DP20")
+smr_bias_mape_long <- melt(smr_bias_mape)
+#generate necessary column names
+colmn <- c("metric","DataSources")
+smr_bias_mape_long <- cbind(smr_bias_mape_long, reshape2::colsplit(smr_bias_mape_long$variable, "_ij_", colmn))
+smr_bias_mape_bw_woo <- ggplot(smr_bias_mape_long, aes(x=race,y=value, fill=DataSources)) + 
+    geom_boxplot(outlier.shape = NA) +
+  facet_wrap(.~metric,scales="free_y") +ylab("")+xlab("Race")
+smr_bias_mape_bw_woo
+# scales="free_y"
+```
 
 
 ####################################

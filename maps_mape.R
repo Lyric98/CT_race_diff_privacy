@@ -29,8 +29,8 @@ dp0527_smr <- dp0527_fit_mean/adat$exp_counts_dp0527
 ce_fit_mean <- apply(ce_fit, 2, mean)
 ce_smr <- ce_fit_mean/adat$exp_counts_ce
 
-dp0527_fit_mape <- abs((ce_smr - dp0527_smr)/ce_smr) #2877
-dp_fit_mape <- abs((ce_smr - dp_smr)/ce_smr) #2877
+# dp0527_fit_mape <- abs((ce_smr - dp0527_smr)/ce_smr) #2877
+# dp_fit_mape <- abs((ce_smr - dp_smr)/ce_smr) #2877
 
 
 

@@ -1,0 +1,526 @@
+---
+title: "supplementary plots"
+author: "Yanran"
+date: "2022/07/02"
+output: html_document
+---
+
+```{r message=FALSE, warning=FALSE}
+library(dplyr)
+library(reshape2)
+library(ggplot2)
+library(cowplot)
+library(rstudioapi)
+library(xtable)
+library(maptools)
+library(spdep)
+library(MASS)
+library(msm)
+library(tigris)
+library(ggplot2)
+library(sf)
+library(tidyr)
+library(purrr)
+library(plyr)
+
+
+
+setwd("~/Desktop/Research/Rachel/CT_race_diff_privacy/results_manu")
+
+load("simnum1.RData")
+dp_sim <- cars
+load("simnum2.RData")
+ce_sim <- cars
+load("simnum3.RData")
+dp0527_sim <- cars
+## set working directory to wherever this file is located ##
+current_path <- getActiveDocumentContext()$path
+setwd(dirname(current_path ))
+
+load('merged_denom_cov_w0527.RData')
+# dim(adat) 209876 * 15
+names(adat)
+```
+
+
+### expected counts table 
+rachel.c.nethery: can we add a supplementary table that shows, for each denominator data source, the percent of expected counts that are 0 (by race group) and the percent that are less than 5 (by race group)?
+
+```{r}
+# aggregate across the sex variable
+agg_sex <- aggregate(ce_pop~GEOID+race+agecat,data=adat, 
+                     FUN = sum,na.rm=T)
+
+
+agg_sex_dp <- aggregate(dp_pop~GEOID+race+agecat,data=adat, 
+                        FUN = sum,na.rm=T)
+
+agg_sex_dp0527 <- aggregate(dp0527_pop~GEOID+race+agecat,data=adat, 
+                            FUN = sum,na.rm=T)
+
+# dimnames
+agelabs <- c("0-4", "5-9", "10-14", "15-17", "18-19", "20-24", "25-29", "30-34", "35-44", "45-54", "55-64")
+
+# count
+count <- rep(0, length(agelabs))
+
+# stdcount & stdpop
+std_pm <- read.csv("standard.csv")
+stdcount <- std_pm$stdcount
+stdpop <- std_pm$stdpop
+
+# ce matrix
+ce_matrix <- matrix(0,ncol = length(unique(adat$GEOID)),
+                    nrow=length(unique(adat$race)), 
+                    dimnames = list(unique(adat$race),
+                                    unique(adat$GEOID)))
+for (i in unique(adat$GEOID)){
+  for (j in unique(adat$race)){
+    count = count
+    pop = agg_sex %>% filter(GEOID ==i, race==j) 
+    output <- ageadjust.indirect(count, pop$ce_pop, stdcount, stdpop, stdrate = NULL, conf.level = 0.95)
+    ce_matrix[j, i] <- output$sir[2]
+  }
+}
+
+# dp matrix
+dp_matrix <- matrix(0,ncol = length(unique(adat$GEOID)),
+                    nrow=length(unique(adat$race)), 
+                    dimnames = list(unique(adat$race),
+                                    unique(adat$GEOID)))
+for (i in unique(adat$GEOID)){
+  for (j in unique(adat$race)){
+    count = count
+    pop_dp = agg_sex_dp %>% filter(GEOID ==i, race==j) 
+    output <- ageadjust.indirect(count, pop_dp$dp_pop, stdcount, stdpop, stdrate = NULL, conf.level = 0.95)
+    dp_matrix[j, i] <- output$sir[2]
+  }
+}
+
+# 0527 new dp matrix
+dp0527_matrix <- matrix(0,ncol = length(unique(adat$GEOID)),
+                        nrow=length(unique(adat$race)), 
+                        dimnames = list(unique(adat$race),
+                                        unique(adat$GEOID)))
+for (i in unique(adat$GEOID)){
+  for (j in unique(adat$race)){
+    count = count
+    pop_dp0527 = agg_sex_dp0527 %>% filter(GEOID ==i, race==j) 
+    output <- ageadjust.indirect(count, pop_dp0527$dp0527_pop, stdcount, stdpop, stdrate = NULL, conf.level = 0.95)
+    dp0527_matrix[j, i] <- output$sir[2]
+  }
+}
+
+# long form 
+# merge the census and differential private expected counts
+ce_l <- data.frame(t(ce_matrix)) %>% 
+  mutate(GEOID = dimnames(data.frame(t(ce_matrix)))[[1]]) %>% 
+  gather(race, exp_counts_ce, -GEOID)
+dp_l <- data.frame(t(dp_matrix)) %>% 
+  mutate(GEOID = dimnames(data.frame(t(dp_matrix)))[[1]]) %>% 
+  gather(race, exp_counts_dp, -GEOID)
+dp0527_l <- data.frame(t(dp0527_matrix)) %>% 
+  mutate(GEOID = dimnames(data.frame(t(dp0527_matrix)))[[1]]) %>% 
+  gather(race, exp_counts_dp0527, -GEOID)
+
+exp_l <- ce_l %>% left_join(dp_l, by=c("GEOID", "race")) %>% left_join(dp0527_l, by=c("GEOID", "race"))
+
+cov_l <- aggregate(cbind(acs_pov_pct)~GEOID+race,data=adat,
+                   FUN = mean)
+
+## merge these aggregated datasets ##
+adat<-merge(exp_l,cov_l,by=c('GEOID','race'))
+
+# remove all the race groups from the dataset expect black and white
+adat <- adat %>% filter(race == 'white' | race == 'black')
+
+## add black & white index
+adat$bw_ind<-0
+adat$bw_ind[which(adat$race=='black')]<-1
+# > dim(adat)
+# [1] 2920    7
+adat<-adat[order(adat$GEOID),]
+
+## check CTs' expected counts ##
+# adat<-subset(adat,exp_counts_ce>0 & exp_counts_dp>0 & exp_counts_dp0527>0)
+Ptrue <- matrix(adat$exp_counts_ce)
+P_dp <- matrix(adat$exp_counts_dp)
+colnames(P_dp) <- "DP19"
+P_dp0527 <- matrix(adat$exp_counts_dp0527)
+colnames(P_dp0527) <- c("DP20")
+
+w <- adat[adat$race=="white",]
+b <- adat[adat$race=="black",]
+
+percent_3_source <- cbind(mean(w$exp_counts_ce==0), mean(w$exp_counts_dp==0),mean(w$exp_counts_dp0527==0), mean(b$exp_counts_ce==0), mean(b$exp_counts_dp==0),mean(b$exp_counts_dp0527==0))%>% rbind(cbind(mean(w$exp_counts_ce<5), mean(w$exp_counts_dp<5),mean(w$exp_counts_dp0527<5), mean(b$exp_counts_ce<5), mean(b$exp_counts_dp<5),mean(b$exp_counts_dp0527<5)))
+percent_3_source <- percent_3_source*100
+
+rownames(percent_3_source) <- c("Percent of 0 expected counts", "Percent of <5 expected counts")
+colnames(percent_3_source) <- c("DC", "DP19", "DP20", "DC", "DP19", "DP20")
+xtable(percent_3_source)
+```
+
+
+
+
+```{r}
+
+
+load("bw_adat.RData")
+names(adat)
+```
+
+
+Average difference of expected counts
+
+```{r}
+# mean(P_dp-Ptrue)
+# mean(P_dp0527-Ptrue)
+
+# mean and standard deviation of the differences in the CT-level DP and DC expected counts for the NHW population are XX for DP19
+
+summary_text <- adat %>% mutate(diff19 = exp_counts_dp-exp_counts_ce) %>% mutate(diff20 = exp_counts_dp0527-exp_counts_ce)
+
+diff19_w <- summary_text[summary_text$race=="white",]$diff19
+diff19_b <- summary_text[summary_text$race=="black",]$diff19
+
+diff20_w <- summary_text[summary_text$race=="white",]$diff20
+diff20_b <- summary_text[summary_text$race=="black",]$diff20
+
+huizong = function(d){
+  hz <- c(mean(d),sd(d))
+  return((hz))
+}
+
+huizong2 = function(d){
+  hz <- quantile(d)
+  return(hz)
+}
+
+huizong(diff19_w)
+huizong(diff19_b)
+huizong(diff20_w)
+huizong(diff20_b)
+
+huizong2(diff19_w)
+huizong2(diff19_b)
+huizong2(diff20_w)
+huizong2(diff20_b)
+
+summary_dp_minus_dc <- rbind(huizong2(diff19_w), huizong2(diff19_b),huizong2(diff20_w), huizong2(diff20_b))
+
+#rownames(summary_dp_minus_dc) <- c("DP19", "DP20")
+xtable(summary_dp_minus_dc,digits = 4)
+```
+
+
+
+
+
+
+### boxplot of comparasion for the SMR estimates using the census denominators with the true SMRs
+
+```{r sim_from_cluster2}
+setwd("~/Desktop/Research/Rachel/CT_race_diff_privacy/results_manu")
+load("simnum4.RData")
+dp0527_fit <- cars
+dp0527_fit_mean <- apply(dp0527_fit, 2, mean)
+load("simnum5.RData")
+dp_fit <- cars
+dp_fit_mean <- apply(dp_fit, 2, mean)
+load("simnum6.RData")
+ce_fit <- cars
+ce_fit_mean <- apply(ce_fit, 2, mean)
+
+load("exp_theta4.RData")
+true_smrs_dp20 = exp_theta
+load("exp_theta5.RData")
+true_smrs_dp19 = exp_theta
+load("exp_theta6.RData")
+true_smrs_ce = exp_theta
+
+# compute smrdps
+current_path <- getActiveDocumentContext()$path
+setwd(dirname(current_path))
+load("bw_adat.RData")
+
+# old dp
+exp_counts_dp19 = data.frame(t(matrix(rep(adat$exp_counts_dp,100),c(length(adat$exp_counts_dp),100))))
+smrdp19 = dp_fit/exp_counts_dp19
+mape_ij_dp19 = colSums(abs((smrdp19-true_smrs_dp19)/true_smrs_dp19))/100
+# 2020-05-27 dp
+exp_counts_dp20 = data.frame(t(matrix(rep(adat$exp_counts_dp0527,100),c(length(adat$exp_counts_dp0527),100))))
+smrdp20 = dp0527_fit/exp_counts_dp20
+mape_ij_dp20 = colSums(abs((smrdp20-true_smrs_dp20)/true_smrs_dp20))/100
+# ce
+exp_counts_ce = data.frame(t(matrix(rep(adat$exp_counts_ce,100),c(length(adat$exp_counts_ce),100))))
+smrce = ce_fit/exp_counts_ce
+mape_ij_ce = colSums(abs((smrce-true_smrs_ce)/true_smrs_ce))/100
+
+
+```
+
+
+
+```{r MAPE boxplot2}
+# looking at boxplots of the mean absolute percentage error of the SMRs for each CT/race group (relative to ce)
+smr_mape <- cbind(adat[1:2], mape_ij_ce, mape_ij_dp19, mape_ij_dp20) 
+smr_mape_box <- smr_mape[,c("GEOID", "race", "mape_ij_ce","mape_ij_dp19","mape_ij_dp20")]
+names(smr_mape_box) <- c("GEOID", "race", "DC","DP19","DP20")
+
+melt_mape <- melt(smr_mape_box)
+names(melt_mape)<-c("GEOID","race","Data","value")
+smr_mape_bw_woo <- ggplot(melt_mape, aes(x=race,y=value, fill=Data)) + 
+    geom_boxplot(outlier.shape = NA)+ylab("MAPE") + coord_cartesian(ylim=c(0, 1.2))+ ylab(NULL)+ggtitle("")
+
+# old dp
+bias_ij_dp19 = colSums(smrdp19-true_smrs_dp19)/100
+# 2020-05-27 dp
+bias_ij_dp20 = colSums(smrdp20-true_smrs_dp20)/100
+# ce
+bias_ij_ce = colSums(smrce-true_smrs_ce)/100
+
+# looking at boxplots of the mean absolute percentage error of the SMRs for each CT/race group (relative to ce)
+smr_bias <- cbind(adat[1:2], bias_ij_ce, bias_ij_dp19, bias_ij_dp20) 
+smr_bias_box <- smr_bias[,c("GEOID", "race", "bias_ij_ce","bias_ij_dp19","bias_ij_dp20")]
+
+smr_bias_bw_woo <- ggplot(melt(smr_bias_box), aes(x=race,y=value, fill=variable)) + 
+    geom_boxplot(outlier.shape = NA)+ylab("Bias")+ coord_cartesian(ylim=c(-0.5, 0.8))+ ylab(NULL) 
+
+require(cowplot)
+library(grid)
+library(gridExtra)
+
+legend <- cowplot::get_legend(
+  # create some space to the left of the legend
+  smr_mape_bw_woo+ theme(legend.box.margin = margin(0, 0, 0, 12)))
+
+prow <- plot_grid(
+  smr_bias_bw_woo+ theme(legend.position="none"),
+  smr_mape_bw_woo+ theme(legend.position="none"),
+  align = 'vh',
+  labels = c("Bias", "MAPE"),
+  hjust = -1,
+  nrow = 1
+)
+
+smr_mape_bias <-cowplot::plot_grid(prow,legend, rel_widths = c(3, .4))
+smr_mape_bias
+
+```
+
+### maps of MAPE for 2020-05-27 version
+
+```{r}
+#### MAPE0527 plot
+load('bw_adat.RData')
+adat <- cbind(adat, mape_ij_dp20)[,c(1, 2, 8)] #2877*4
+
+
+## put in wide format to merge with the shapefile ##
+adat_wide<-merge(adat[which(adat$race=='white'),],adat[which(adat$race=='black'),],by='GEOID',suffixes=c('_w','_b'))
+#  1418*7
+
+## extract CT shapefile ##
+ma_shp<-tracts(state = 'MA',year=2010)
+
+## merge with pop and rate data ##
+ma_shp<-merge(ma_shp,adat_wide,by.x='GEOID10',by.y='GEOID',all.x=T)
+
+## put in sf format to use nice mapping packages ##
+ma_shp<-st_as_sf(ma_shp)  #1478*21
+
+
+shp_plot0527<-gather(ma_shp,'race','fit0527_mape',
+                 c(mape_ij_dp20_w,mape_ij_dp20_b),factor_key = T)
+
+shp_plot0527$race<-mapvalues(shp_plot0527$race,
+                         from=c('mape_ij_dp20_w','mape_ij_dp20_b'),
+                         to=c('NHW','Black'))
+#quantile(shp_plot0527$fit0527_mape, na.rm = T)
+# 0.1589031 0.3059507 0.5038545 0.6941363 1.7476195 
+ma_q<-c(0,0.21,0.466, 0.722, 0.978,1.234,1.49,max(shp_plot0527$fit0527_mape,na.rm = T)+1)
+
+
+shp_plot0527$exp_factor<-cut(shp_plot0527$fit0527_mape,breaks=ma_q,
+                             labels=c('<0.210','[0.210,0.466)','[0.466,0.722)','[0.722,0.978)','[0.978,1.234)',
+                                      '[1.234,1.490)','1.490+'),right=F)
+
+## race-stratified expected counts, MA ##
+ma_maps0527<-ggplot(shp_plot0527, aes(fill = exp_factor)) +
+  geom_sf(colour=NA) +
+  scale_fill_brewer(palette = "YlOrRd")+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        legend.title=element_blank(),text=element_text(size=18))+
+  facet_wrap(~ race)
+
+## read in boston shapefiles ##
+bos_shp<-st_read('boston_ct/Census_2010_Tracts.shp')
+bos_shp<-merge(bos_shp,adat_wide,by.x='GEOID10',by.y='GEOID',all.x=T)
+
+bos_bbox<-as.numeric(st_bbox(bos_shp))
+
+xlim<-c(bos_bbox[1], bos_bbox[1]+.4*(bos_bbox[3]-bos_bbox[1]))
+ylim<-c(bos_bbox[2], bos_bbox[2]+.8*(bos_bbox[4]-bos_bbox[2]))
+
+## remove CTs with zero population (these are the islands off the MA coast) ##
+#bos_shp<-bos_shp[which(bos_shp$exp_counts_ce_w!="NA" | bos_shp$exp_counts_ce_b!="NA"),]
+
+## long form by race ##
+shp_plot0527<-gather(bos_shp,'race','fit0527_mape',
+                 c(mape_ij_dp20_w,mape_ij_dp20_b),factor_key = T)
+
+shp_plot0527$race<-mapvalues(shp_plot0527$race,
+                         from=c('mape_ij_dp20_w','mape_ij_dp20_b'),
+                         to=c('NHW','Black'))
+
+shp_plot0527$exp_factor<-cut(shp_plot0527$fit0527_mape,breaks=ma_q,
+                             labels=c('<0.210','[0.210,0.466)','[0.466,0.722)','[0.722,0.978)','[0.978,1.234)',
+                                      '[1.234,1.490)','1.490+'),right=F)
+
+## race-stratified expected counts, BOS ##  
+bos_maps0527<-ggplot(shp_plot0527, aes(fill = exp_factor)) +
+  geom_sf(colour=NA) +
+  coord_sf(xlim=xlim,ylim=ylim)+
+  scale_fill_brewer(palette = "YlOrRd")+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        legend.title=element_blank(),text=element_text(size=18))+
+  facet_wrap(~ race)
+
+m0527<-cowplot::plot_grid(ma_maps0527,bos_maps0527,ncol=1)
+
+## save to pdf ##
+#pdf('maps_mape0527.pdf',width=7,height=6)
+print(m0527)
+
+
+```
+
+
+### maps of bias for 2020-05-27 version
+
+```{r}
+#### bias0527 plot
+load('bw_adat.RData')
+adat <- cbind(adat, bias_ij_dp20)[,c(1, 2, 8)] #2877*4
+
+
+## put in wide format to merge with the shapefile ##
+adat_wide<-merge(adat[which(adat$race=='white'),],adat[which(adat$race=='black'),],by='GEOID',suffixes=c('_w','_b'))
+#  1418*7
+
+## extract CT shapefile ##
+ma_shp<-tracts(state = 'MA',year=2010)
+
+## merge with pop and rate data ##
+ma_shp<-merge(ma_shp,adat_wide,by.x='GEOID10',by.y='GEOID',all.x=T)
+
+## put in sf format to use nice mapping packages ##
+ma_shp<-st_as_sf(ma_shp)  #1478*21
+
+
+shp_plot0527<-gather(ma_shp,'race','fit0527_bias',
+                 c(bias_ij_dp20_w,bias_ij_dp20_b),factor_key = T)
+
+shp_plot0527$race<-mapvalues(shp_plot0527$race,
+                         from=c('bias_ij_dp20_w','bias_ij_dp20_b'),
+                         to=c('NHW','Black'))
+# quantile(shp_plot0527$fit0527_bias, na.rm = T)
+# -1.21238734 -0.06270235  0.03549275  0.14697380  7.08009385 
+# sort(shp_plot0527$fit0527_bias, decreasing = TRUE)
+#   [1] 7.08009385 1.78895720
+
+ma_q<-c(min(shp_plot0527$fit0527_bias,na.rm = T)-1,-0.104,-0.062, -0.020, 0.021,0.063,0.105,max(shp_plot0527$fit0527_bias,na.rm = T)+1)
+
+
+shp_plot0527$exp_factor<-cut(shp_plot0527$fit0527_bias,breaks=ma_q,
+                              labels=c('<-0.104','[-0.104, -0.062)','[ -0.062,-0.020)','[-0.020,0.021)','[0.021,0.063)',
+                                      '[0.063,0.105)','0.105+'),right=F)
+
+## race-stratified expected counts, MA ##
+ma_maps0527<-ggplot(shp_plot0527, aes(fill = exp_factor)) +
+  geom_sf(colour=NA) +
+  scale_fill_brewer(palette = "Spectral")+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        legend.title=element_blank(),text=element_text(size=18))+
+  facet_wrap(~ race)
+ma_maps0527
+## read in boston shapefiles ##
+bos_shp<-st_read('boston_ct/Census_2010_Tracts.shp')
+bos_shp<-merge(bos_shp,adat_wide,by.x='GEOID10',by.y='GEOID',all.x=T)
+
+bos_bbox<-as.numeric(st_bbox(bos_shp))
+
+xlim<-c(bos_bbox[1], bos_bbox[1]+.4*(bos_bbox[3]-bos_bbox[1]))
+ylim<-c(bos_bbox[2], bos_bbox[2]+.8*(bos_bbox[4]-bos_bbox[2]))
+
+## remove CTs with zero population (these are the islands off the MA coast) ##
+#bos_shp<-bos_shp[which(bos_shp$exp_counts_ce_w!="NA" | bos_shp$exp_counts_ce_b!="NA"),]
+
+## long form by race ##
+shp_plot0527<-gather(bos_shp,'race','fit0527_bias',
+                 c(bias_ij_dp20_w,bias_ij_dp20_b),factor_key = T)
+
+shp_plot0527$race<-mapvalues(shp_plot0527$race,
+                         from=c('bias_ij_dp20_w','bias_ij_dp20_b'),
+                         to=c('NHW','Black'))
+# quantile(shp_plot0527$fit0527_bias, na.rm=TRUE)
+# -0.88785804 -0.10397695  0.03460298  0.20137904  7.08009385
+
+shp_plot0527$exp_factor<-cut(shp_plot0527$fit0527_bias,breaks=ma_q,
+                             labels=c('<-0.104','[-0.104, -0.062)','[ -0.062,-0.020)','[-0.020,0.021)','[0.021,0.063)',
+                                      '[0.063,0.105)','0.105+'),right=F)
+
+## race-stratified expected counts, BOS ##  
+bos_maps0527<-ggplot(shp_plot0527, aes(fill = exp_factor)) +
+  geom_sf(colour=NA) +
+  coord_sf(xlim=xlim,ylim=ylim)+
+  scale_fill_brewer(palette = "Spectral")+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        legend.title=element_blank(),text=element_text(size=18))+
+  facet_wrap(~ race)
+
+m0527<-cowplot::plot_grid(ma_maps0527,bos_maps0527,ncol=1)
+
+## save to pdf ##
+#pdf('maps_mape0527.pdf',width=7,height=6)
+print(m0527)
+
+
+```
+
+
+
+
+
+
+
+

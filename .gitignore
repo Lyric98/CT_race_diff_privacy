@@ -1,8 +1,26 @@
-# Data
-*.csv
-*.RData
-*.icloud
-.RData
+ 
+# History files
+*.Rhistory
+*.Rapp.history
 
-# boston_city fold
-boston_ct/*
+.ipynb_checkpoints
+.RDataTmp
+*.RDataTmp
+
+# R Environment Variables
+*.Renviron
+*.DS_Store
+*DS_Store
+.DS_Store
+
+# Apple icloud files
+*.icloud
+
+# large data files
+usa_ppp_2010.tif
+usa_ppp_2010_1km_Aggregated.tif
+wp_1km_county_aggregate_2010.RData
+
+# tif and vrt
+.tif
+.vrt

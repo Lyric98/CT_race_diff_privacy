@@ -1,0 +1,387 @@
+---
+title: "Massachusetts Premature Mortality Analysis"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: pdf_document
+classoption: landscape
+---
+
+```{r loadlibs,include=FALSE}
+library(maptools)
+library(spdep)
+library(MASS)
+library(msm)
+library(tigris)
+options(tigris_use_cache = FALSE)
+library(CARBayes)
+library(knitr)
+library(kableExtra)
+library(lme4)
+library(xtable)
+library(reshape2)
+library(sf)
+library(rstudioapi)
+library(epitools)
+library(dplyr)
+library(tidyverse)
+
+blank_lines <- function(n = 10){cat(rep("&nbsp;  ",n), sep="\n")}
+```
+
+create pm_rate included data
+
+```{r}
+########################################################################
+## Using the long-form MA census tract population and mortality data   ##
+## create CT-level crude and age- and sex-standardized mortality rates ##
+#########################################################################
+
+## set working directory to wherever this file is located ##
+current_path <- getActiveDocumentContext()$path
+setwd(dirname(current_path ))
+
+################################################################
+## 1. read in the long-form data with merged mortality counts ##
+################################################################
+
+#load('merged_denom_cov_w0527.RData')  # 209876*15
+#adat<-subset(adat,race %in% c('total','white','black','hispanic'))
+
+# na_acs_pov_pct<-adat[is.na(adat$acs_pov_pct),]
+# length(unique(na_acs_pov_pct$GEOID))
+# 1478-1460
+# [1] 18
+
+
+## make a function to process mortality data ##
+process_mort<-function(mort){
+  ## remove deaths that are not assigned to a CT or gender or race or ethnicity ##
+  mort<-subset(mort,areakey10>0 & !(racecat=='unknown') & !(gencat=='unknow') & !(hispanic==9))
+  
+  ## subset to premature mortalities (<65) ##
+  pmort<-subset(mort,age<65)
+  
+  ## add age categories ##
+  agecat<-paste0('Age',c('0-4','5-9','10-14','15-17','18-19','20-24','25-29','30-34','35-44','45-54','55-64'))
+  
+  pmort$agecat<-cut(pmort$age,breaks=c(0,5,10,15,18,20,25,30,35,45,55,65),right = F)
+  levels(pmort$agecat)<-agecat
+  
+  ## count deaths within CT, age, sex groups (for total across races) ##
+  cpmort<-as.data.frame(table(pmort$areakey10,pmort$agecat,pmort$gencat))
+  names(cpmort)<-c('GEOID','agecat','sex','ndeaths')
+  cpmort$race<-'total'
+  
+  ## count deaths within CT, age, sex groups for hispanic ethnicity ##
+  pmort_eth<-subset(pmort,hispanic %in% 1:7 | race==15)
+  
+  cpmort_eth<-as.data.frame(table(pmort_eth$areakey10,pmort_eth$agecat,pmort_eth$gencat))
+  names(cpmort_eth)<-c('GEOID','agecat','sex','ndeaths')
+  cpmort_eth$race<-'hispanic'
+  
+  ## subset to only races non-hispanic white, black, asian/pacislander, american indian ##
+  pmort$race2<-NA
+  pmort$race2[which(pmort$hispanic==0 & pmort$race==1)]<-'white'
+  pmort$race2[which(pmort$race==2)]<-'black'
+  pmort$race2[which(pmort$race==3)]<-'am_indian'
+  pmort$race2[which(pmort$race %in% c(4, 5, 7, 8, 9, 10, 12))]<-'asian'
+  pmort$race2[which(pmort$race %in% c(6,11))]<-'pac_islander'
+  
+  pmort_sub<-subset(pmort,!is.na(race2))
+  
+  ## count deaths within CT, race, age, sex groups ##
+  cpmort_sub<-as.data.frame(table(pmort_sub$areakey10,pmort_sub$race2,pmort_sub$agecat,pmort_sub$gencat))
+  names(cpmort_sub)<-c('GEOID','race','agecat','sex','ndeaths')
+  
+  adat_pmort<-rbind(cpmort,cpmort_sub,cpmort_eth)
+  levels(adat_pmort$sex)<-c('f','m')
+  
+  return(adat_pmort)
+}
+
+
+## read/process 2010 mortality data ##
+mort1yr<-read.csv('mort_geo_10.csv',
+                  stringsAsFactors = F,header=T)
+
+adat_mort1yr<-process_mort(mort=mort1yr)
+
+#adat<-lapply(adat,function(x) merge(x,adat_mort1yr,by=c('GEOID','race','agecat','sex'),all.x=T))
+
+
+adat <- merge(adat, adat_mort1yr,by=c('GEOID','race','agecat','sex'),all.x=T)
+
+## missing ndeaths ==> 0 deaths ##
+rr<-function(x){
+  x$ndeaths[which(is.na(x$ndeaths))]<-0
+  return(x)
+}
+
+adat <- rr(adat)
+
+
+##################################################
+## 2. use epitools to create standardized rates ##
+##################################################
+
+# aggregate across the sex variable
+agg_sex <- aggregate(ce_pop~GEOID+race+agecat,data=adat, 
+                     FUN = sum,na.rm=T)
+
+
+agg_sex_dp <- aggregate(dp_pop~GEOID+race+agecat,data=adat, 
+                        FUN = sum,na.rm=T)
+
+agg_sex_dp0527 <- aggregate(dp0527_pop~GEOID+race+agecat,data=adat, 
+                            FUN = sum,na.rm=T)
+
+agg_sex_dp22 <- aggregate(dp22_pop~GEOID+race+agecat,data=adat, 
+                            FUN = sum,na.rm=T)
+
+# dimnames
+agelabs <- c("0-4", "5-9", "10-14", "15-17", "18-19", "20-24", "25-29", "30-34", "35-44", "45-54", "55-64")
+
+# count
+count <- rep(0, length(agelabs))
+
+# stdcount & stdpop
+std_pm <- read.csv("standard.csv")
+stdcount <- std_pm$stdcount
+stdpop <- std_pm$stdpop
+
+# ce matrix
+ce_matrix <- matrix(0,ncol = length(unique(adat$GEOID)),
+                    nrow=length(unique(adat$race)), 
+                    dimnames = list(unique(adat$race),
+                                    unique(adat$GEOID)))
+for (i in unique(adat$GEOID)){
+  for (j in unique(adat$race)){
+    count = count
+    pop = agg_sex %>% filter(GEOID ==i, race==j) 
+    output <- ageadjust.indirect(count, pop$ce_pop, stdcount, stdpop, stdrate = NULL, conf.level = 0.95)
+    ce_matrix[j, i] <- output$sir[2]
+  }
+}
+
+# dp matrix
+dp_matrix <- matrix(0,ncol = length(unique(adat$GEOID)),
+                    nrow=length(unique(adat$race)), 
+                    dimnames = list(unique(adat$race),
+                                    unique(adat$GEOID)))
+for (i in unique(adat$GEOID)){
+  for (j in unique(adat$race)){
+    count = count
+    pop_dp = agg_sex_dp %>% filter(GEOID ==i, race==j) 
+    output <- ageadjust.indirect(count, pop_dp$dp_pop, stdcount, stdpop, stdrate = NULL, conf.level = 0.95)
+    dp_matrix[j, i] <- output$sir[2]
+  }
+}
+
+# 0527 new dp matrix
+dp0527_matrix <- matrix(0,ncol = length(unique(adat$GEOID)),
+                        nrow=length(unique(adat$race)), 
+                        dimnames = list(unique(adat$race),
+                                        unique(adat$GEOID)))
+for (i in unique(adat$GEOID)){
+  for (j in unique(adat$race)){
+    count = count
+    pop_dp0527 = agg_sex_dp0527 %>% filter(GEOID ==i, race==j) 
+    output <- ageadjust.indirect(count, pop_dp0527$dp0527_pop, stdcount, stdpop, stdrate = NULL, conf.level = 0.95)
+    dp0527_matrix[j, i] <- output$sir[2]
+  }
+}
+
+# 0316 new dp matrix
+dp22_matrix <- matrix(0,ncol = length(unique(adat$GEOID)),
+                        nrow=length(unique(adat$race)), 
+                        dimnames = list(unique(adat$race),
+                                        unique(adat$GEOID)))
+for (i in unique(adat$GEOID)){
+  for (j in unique(adat$race)){
+    count = count
+    pop_dp22 = agg_sex_dp22 %>% filter(GEOID ==i, race==j) 
+    output <- ageadjust.indirect(count, pop_dp22$dp22_pop, stdcount, stdpop, stdrate = NULL, conf.level = 0.95)
+    dp22_matrix[j, i] <- output$sir[2]
+  }
+}
+
+
+
+# long form 
+# merge the census and differential private expected counts
+ce_l <- data.frame(t(ce_matrix)) %>% 
+  mutate(GEOID = dimnames(data.frame(t(ce_matrix)))[[1]]) %>% 
+  gather(race, exp_counts_ce, -GEOID)
+dp_l <- data.frame(t(dp_matrix)) %>% 
+  mutate(GEOID = dimnames(data.frame(t(dp_matrix)))[[1]]) %>% 
+  gather(race, exp_counts_dp, -GEOID)
+dp0527_l <- data.frame(t(dp0527_matrix)) %>% 
+  mutate(GEOID = dimnames(data.frame(t(dp0527_matrix)))[[1]]) %>% 
+  gather(race, exp_counts_dp0527, -GEOID)
+dp22_l <- data.frame(t(dp22_matrix)) %>% 
+  mutate(GEOID = dimnames(data.frame(t(dp22_matrix)))[[1]]) %>% 
+  gather(race, exp_counts_dp22, -GEOID)
+
+
+exp_l <- ce_l %>% left_join(dp_l, by=c("GEOID", "race")) %>% 
+  left_join(dp0527_l, by=c("GEOID", "race")) %>% 
+  left_join(dp22_l, by=c("GEOID", "race")) # 1478 GEOID
+
+cov_l <- aggregate(cbind(acs_pov_pct)~GEOID+race,data=adat,
+                   FUN = mean)  # 1460 GEOID
+ndeaths_l <- aggregate(cbind(ndeaths)~GEOID+race,data=adat,
+                   FUN = sum)
+
+## merge these aggregated datasets ##
+adat<-merge(exp_l,cov_l,by=c('GEOID','race'))
+adat<-merge(adat, ndeaths_l,by=c('GEOID','race')) # 1460 GEOID
+
+## check CTs' expected counts ##
+adat<-subset(adat,exp_counts_ce>0 & exp_counts_dp>0 & exp_counts_dp0527>0, exp_counts_dp22>0)
+adat<-adat[order(adat$GEOID),]
+
+# remove all the race groups from the dataset expect black and white
+#adat <- adat %>% filter(race == 'white' | race == 'black')
+
+# remove all the race groups from the dataset expect black and white
+adat <- adat %>% filter(race == 'white' | race == 'black'|race=='total')
+
+```
+
+
+
+```{r setup_rs, include=FALSE,cache=TRUE}
+
+## setup for race-stratified models ##
+
+## number of burn-in samples to collect ##
+nburn<-10000
+## number of burn-in + post samples ##
+nsamp<-30000
+set.seed(2)
+#############################
+## read in the merged data ##
+#############################
+
+
+########################################
+## adjacency matrix for census tracts ##
+########################################
+
+## extract shapefile ##
+ma_shp<-tracts(state = 'MA',year=2010)
+
+## get adjacency matrix ##
+# foo = poly2nb(ma_shp, queen=TRUE, row.names=ma_shp@data$GEOID10)
+#sf_roads <- readShapePoly("/Users/liyanran/Desktop/Research/Rachel/census_diff_privacy-master/sims/tl_2010_25_tract10/tl_2010_25_tract10.shp")
+## create function to process data, apply CAR models, and output results ##
+W <- read.csv("W.csv")
+rownames(W) <- W[,1]
+W <- W[,-1]
+W <- as.matrix(W)
+
+
+apply_car_rs<-function(x){
+  
+  x<-x[which(!(x$race %in% c('total'))),]
+  
+  ## add numeric black/white indicator ##
+  x$bw_ind<-0
+  x$bw_ind[which(x$race=='black')]<-1
+  
+  ## remove CTs with 0 population (either ACS or WP) ##
+  #x<-subset(x,ce_5yr_pop>0 & dp19_5yr_pop>0 & dp20_5yr_pop>0)
+  
+  ## remove missing covariates ##
+  x<-x[complete.cases(x[,c('bw_ind','acs_pov_pct')]),]
+  
+  x$acs_pov_pct<-as.numeric(scale(x$acs_pov_pct))
+  
+  ## sort by geoid ##
+  x<-x[order(x$GEOID),]
+  
+  N<-nrow(x)
+  Nct<-length(unique(x$GEOID))
+  
+  #######################################################################
+  ## align ordering of adjacency matrix and covariates/population data ##
+  #######################################################################
+  
+  #W=nb2mat(foo,style='B')
+  
+  ## census tracts in W with matches in the data ##
+  tractrm<-which(rownames(W) %in% as.character(x$GEOID))
+  
+  W<-W[tractrm,tractrm]
+  
+  W<-W[order(as.numeric(rownames(W))),order(as.numeric(rownames(W)))]
+  
+  identical(unique(as.character(x$GEOID)),rownames(W))
+  
+  ####################################################
+  ## fit CAR models with census/acs/wp denominators ##
+  ####################################################
+  
+  x$ind.area<-as.numeric(as.factor(x$GEOID))
+  x$ind.re<-as.factor(1:N)
+  
+
+  car_offs1<-S.CARmultilevel(ndeaths~bw_ind+acs_pov_pct+offset(log(matrix(x$exp_counts_ce))),family="poisson",data=x,
+                             ind.area=x$ind.area,
+                             ind.re=x$ind.re,
+                             W=W,burnin=nburn,n.sample=nsamp)
+  
+  car_offs2<-S.CARmultilevel(ndeaths~bw_ind+acs_pov_pct+offset(log(matrix(x$exp_counts_dp))),family="poisson",data=x,ind.area=x$ind.area,ind.re=x$ind.re,W=W,burnin=nburn,n.sample=nsamp)
+      
+  car_offs3<-S.CARmultilevel(ndeaths~bw_ind+acs_pov_pct+offset(log(matrix(x$exp_counts_dp0527))),family="poisson",data=x,
+                             ind.area=x$ind.area,
+                             ind.re=x$ind.re,
+                             W=W,burnin=nburn,n.sample=nsamp)
+  car_offs4<-S.CARmultilevel(ndeaths~bw_ind+acs_pov_pct+offset(log(matrix(x$exp_counts_dp22))),family="poisson",data=x,
+                             ind.area=x$ind.area,
+                             ind.re=x$ind.re,
+                             W=W,burnin=nburn,n.sample=nsamp)
+    
+    
+    sum_bw<-as.data.frame(round(cbind(exp(car_offs1[[1]][1:3,1:3]),exp(car_offs2[[1]][1:3,1:3]),exp(car_offs3[[1]][1:3,1:3]),exp(car_offs4[[1]][1:3,1:3])),2))
+    names(sum_bw)<-rep(c('IRR','Lower CL','Upper CL'),4)
+    #rownames(sum_bw)<-c('Intercept','Black (vs NH-White)','Poverty')
+    
+    return(sum_bw)
+}
+
+out_car_rs<-apply_car_rs(adat)
+
+ 
+```
+
+
+# Race-stratified models (1yr)
+
+
+&nbsp;
+&nbsp;
+
+```{r output_rs, echo=FALSE,results='asis'}
+
+## make a table of race-stratified results and print ##
+
+## collapse point estimates and CIs in the tables ##
+out_list_rs<-data.frame('DC'=paste(out_car_rs[,1],paste0('(',apply(out_car_rs[ ,2:3] , 1 , paste0 , collapse = "," ),')')), 'DP19'=paste(out_car_rs[,4],paste0('(',apply(out_car_rs[ ,5:6] , 1 , paste0 , collapse = "," ),')')),'DP20'=paste(out_car_rs[,7],paste0('(',apply(out_car_rs[ ,8:9] , 1 , paste0 , collapse = "," ),')')))
+rownames(out_list_rs)<-c('Intercept','Race','Poverty')
+
+#out_tab_rs<-data.frame('parameter'=c('Intercept','Race','Poverty'),cbind(out_list_rs[[1]],out_list_rs[[2]],out_list_rs[[3]]))
+#rownames(out_tab_rs)<-paste0(rep(2010,each=3),c('a','b','c'))
+
+capture.output(xtable(out_list_rs),file='rs_table.txt')
+
+xtable(out_list_rs)
+
+```
+
+
+
+
+
+
+
+

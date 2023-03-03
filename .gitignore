@@ -24,3 +24,18 @@ wp_1km_county_aggregate_2010.RData
 # tif and vrt
 .tif
 .vrt
+
+.CSV
+.csv 
+*.csv
+*csv
+
+.RData
+*.RData
+*RData
+
+
+
+
+
+

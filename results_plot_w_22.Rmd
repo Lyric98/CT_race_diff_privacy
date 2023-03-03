@@ -109,7 +109,55 @@ mean_bias <- rbind(mean(ce_sim$beta0_bias), mean(ce_sim$beta1_bias), mean(ce_sim
 colnames(mean_bias)<-c("DC", "DP19", "DP20", "DP22", "DP0825")
 #rownames(mean_bias) <- c()
 xtable(mean_bias,digits = 4)
+
 ```
+
+
+```{r coef CI coverage}
+
+beta0_true <- 0
+beta1_true <- 0.4
+beta2_true <- 0.01
+
+# check CI coverage
+ce_ci_cov0 <- ifelse(beta0_true >= ce_sim$beta0_lo & beta0_true <= ce_sim$beta0_hi, 1, 0)
+ce_ci_cov1 <- ifelse(beta1_true >= ce_sim$beta1_lo & beta1_true <= ce_sim$beta1_hi, 1, 0)
+ce_ci_cov2 <- ifelse(beta2_true >= ce_sim$beta2_lo & beta2_true <= ce_sim$beta2_hi, 1, 0)
+
+dp_ci_cov0 <- ifelse(beta0_true >= dp_sim$beta0_lo & beta0_true <= dp_sim$beta0_hi, 1, 0)
+dp_ci_cov1 <- ifelse(beta1_true >= dp_sim$beta1_lo & beta1_true <= dp_sim$beta1_hi, 1, 0)
+dp_ci_cov2 <- ifelse(beta2_true >= dp_sim$beta2_lo & beta2_true <= dp_sim$beta2_hi, 1, 0)
+
+dp0527_ci_cov0 <- ifelse(beta0_true >= dp0527_sim$beta0_lo & beta0_true <= dp0527_sim$beta0_hi, 1, 0)
+dp0527_ci_cov1 <- ifelse(beta1_true >= dp0527_sim$beta1_lo & beta1_true <= dp0527_sim$beta1_hi, 1, 0)
+dp0527_ci_cov2 <- ifelse(beta2_true >= dp0527_sim$beta2_lo & beta2_true <= dp0527_sim$beta2_hi, 1, 0)
+
+dp22_ci_cov0 <- ifelse(beta0_true >= dp22_sim$beta0_lo & beta0_true <= dp22_sim$beta0_hi, 1, 0)
+dp22_ci_cov1 <- ifelse(beta1_true >= dp22_sim$beta1_lo & beta1_true <= dp22_sim$beta1_hi, 1, 0)
+dp22_ci_cov2 <- ifelse(beta2_true >= dp22_sim$beta2_lo & beta2_true <= dp22_sim$beta2_hi, 1, 0)
+
+dp0825_ci_cov0 <- ifelse(beta0_true >= dp0825_sim$beta0_lo & beta0_true <= dp0825_sim$beta0_hi, 1, 0)
+dp0825_ci_cov1 <- ifelse(beta1_true >= dp0825_sim$beta1_lo & beta1_true <= dp0825_sim$beta1_hi, 1, 0)
+dp0825_ci_cov2 <- ifelse(beta2_true >= dp0825_sim$beta2_lo & beta2_true <= dp0825_sim$beta2_hi, 1, 0)
+
+# check CI coverage
+ce_ci_cov <- c(mean(ce_ci_cov0), mean(ce_ci_cov1), mean(ce_ci_cov2))
+dp_ci_cov <- c(mean(dp_ci_cov0), mean(dp_ci_cov1), mean(dp_ci_cov2))
+dp0527_ci_cov <- c(mean(dp0527_ci_cov0), mean(dp0527_ci_cov1), mean(dp0527_ci_cov2))
+dp22_ci_cov <- c(mean(dp22_ci_cov0), mean(dp22_ci_cov1), mean(dp22_ci_cov2))
+dp0825_ci_cov <- c(mean(dp0825_ci_cov0), mean(dp0825_ci_cov1), mean(dp0825_ci_cov2))
+
+ci_cov <- cbind(ce_ci_cov, dp_ci_cov, dp0527_ci_cov, dp22_ci_cov, dp0825_ci_cov)
+rownames(ci_cov) <- c("beta0", "beta1", "beta2")
+colnames(ci_cov) <- c("DC", "DP19", "DP20", "DP22", "DP0825")
+
+xtable(ci_cov*100, digits = 0)
+
+```
+
+
+
+
 
 ```{r coef percent error}
 # percent error = (coef - beta)/beta * 100%
@@ -434,13 +482,39 @@ colnames(avg_bias)<-c("DC","DP19", "DP20", "DP22", "DP2208")
 rownames(avg_bias) <- c("NHW", "Black")
 xtable(avg_bias,digits = 4)
 
-# average biases
+# average mapes
 
-avg_bias <- rbind(mean(bias10_w), mean(bias10_b))%>% cbind( rbind(mean(bias19_w), mean(bias19_b)))%>% cbind( rbind(mean(bias20_w), mean(bias20_b))) %>% cbind( rbind(mean(bias22_w), mean(bias22_b)))%>% cbind( rbind(mean(bias2208_w), mean(bias2208_b)))
+mape10_w <- smr_mape[smr_mape$race=="white",]$mape_ij_ce
+mape10_b <- smr_mape[smr_mape$race=="black",]$mape_ij_ce
 
-colnames(avg_bias)<-c("DC","DP19", "DP20", "DP22", "DP2208")
-rownames(avg_bias) <- c("NHW", "Black")
-xtable(avg_bias,digits = 4)
+mape19_w <- smr_mape[smr_mape$race=="white",]$mape_ij_dp19
+mape19_b <- smr_mape[smr_mape$race=="black",]$mape_ij_dp19
+
+mape20_w <- smr_mape[smr_mape$race=="white",]$mape_ij_dp20
+mape20_b <- smr_mape[smr_mape$race=="black",]$mape_ij_dp20
+
+mape22_w <- smr_mape[smr_mape$race=="white",]$mape_ij_dp22
+mape22_b <- smr_mape[smr_mape$race=="black",]$mape_ij_dp22
+
+mape2208_w <- smr_mape[smr_mape$race=="white",]$mape_ij_dp2208
+mape2208_b <- smr_mape[smr_mape$race=="black",]$mape_ij_dp2208
+
+huizong(mape10_w)
+huizong(mape10_b)
+huizong(mape19_w)
+huizong(mape19_b)
+huizong(mape20_w)
+huizong(mape20_b)
+huizong(mape22_w)
+huizong(mape22_b)
+huizong(mape2208_w)
+huizong(mape2208_b)
+
+avg_mape <- rbind(mean(mape10_w), mean(mape10_b))%>% cbind( rbind(mean(mape19_w), mean(mape19_b)))%>% cbind( rbind(mean(mape20_w), mean(mape20_b))) %>% cbind( rbind(mean(mape22_w), mean(mape22_b)))%>% cbind( rbind(mean(mape2208_w), mean(mape2208_b)))
+
+colnames(avg_mape)<-c("DC","DP19", "DP20", "DP22", "DP2208")
+rownames(avg_mape) <- c("NHW", "Black")
+xtable(avg_mape,digits = 4)
 
 
 ```

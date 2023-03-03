@@ -1,0 +1,163 @@
+---
+title: "Massachusetts Premature Mortality Analysis"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: pdf_document
+classoption: landscape
+---
+
+```{r loadlibs,include=FALSE}
+library(maptools)
+library(spdep)
+library(MASS)
+library(msm)
+library(tigris)
+options(tigris_use_cache = FALSE)
+library(CARBayes)
+library(knitr)
+library(kableExtra)
+library(lme4)
+library(xtable)
+library(reshape2)
+library(sf)
+
+blank_lines <- function(n = 10){cat(rep("&nbsp;  ",n), sep="\n")}
+```
+
+
+```{r setup_rs, include=FALSE,cache=TRUE}
+
+## setup for race-stratified models ##
+
+## number of burn-in samples to collect ##
+nburn<-20000
+## number of burn-in + post samples ##
+nsamp<-30000
+
+set.seed(2)
+
+
+#############################
+## read in the merged data ##
+#############################
+
+load('merged_pmrates_ce_acs_strat.RData')
+
+########################################
+## adjacency matrix for census tracts ##
+########################################
+
+## extract shapefile ##
+ma_shp<-tracts(state = 'MA',year=2010)
+
+## get adjacency matrix ##
+# foo = poly2nb(ma_shp, queen=TRUE, row.names=ma_shp@data$GEOID10)
+#sf_roads <- readShapePoly("/Users/liyanran/Desktop/Research/Rachel/census_diff_privacy-master/sims/tl_2010_25_tract10/tl_2010_25_tract10.shp")
+## create function to process data, apply CAR models, and output results ##
+W <- read.csv("W.csv")
+rownames(W) <- W[,1]
+W <- W[,-1]
+W <- as.matrix(W)
+
+
+apply_car_rs<-function(x){
+  
+  x<-x[which(!(x$race %in% c('total'))),]
+  
+  ## add numeric black/white indicator ##
+  x$bw_ind<-0
+  x$bw_ind[which(x$race=='black')]<-1
+  
+  ## remove CTs with 0 population (either ACS or WP) ##
+  x<-subset(x,ce_5yr_pop>0 & dp19_5yr_pop>0 & dp20_5yr_pop>0)
+  
+  ## remove missing covariates ##
+  x<-x[complete.cases(x[,c('bw_ind','acs_pov_pct')]),]
+  
+  x$acs_pov_pct<-as.numeric(scale(x$acs_pov_pct))
+  
+  ## sort by geoid ##
+  x<-x[order(x$GEOID),]
+  
+  N<-nrow(x)
+  Nct<-length(unique(x$GEOID))
+  
+  #######################################################################
+  ## align ordering of adjacency matrix and covariates/population data ##
+  #######################################################################
+  
+  #W=nb2mat(foo,style='B')
+  
+  ## census tracts in W with matches in the data ##
+  tractrm<-which(rownames(W) %in% as.character(x$GEOID))
+  
+  W<-W[tractrm,tractrm]
+  
+  W<-W[order(as.numeric(rownames(W))),order(as.numeric(rownames(W)))]
+  
+  identical(unique(as.character(x$GEOID)),rownames(W))
+  
+  ####################################################
+  ## fit CAR models with census/acs/wp denominators ##
+  ####################################################
+  
+  x$ind.area<-as.numeric(as.factor(x$GEOID))
+  x$ind.re<-as.factor(1:N)
+  
+
+  car_offs1<-S.CARmultilevel(ndeaths_5yr~bw_ind+acs_pov_pct+offset(log(ce_5yr_istexp)),family="poisson",data=x,
+                             ind.area=x$ind.area,
+                             ind.re=x$ind.re,
+                             W=W,burnin=nburn,n.sample=nsamp)
+  
+  car_offs2<-S.CARmultilevel(ndeaths_5yr~bw_ind+acs_pov_pct+offset(log(dp19_5yr_istexp)),family="poisson",data=x,ind.area=x$ind.area,ind.re=x$ind.re,W=W,burnin=nburn,n.sample=nsamp)
+      
+  car_offs3<-S.CARmultilevel(ndeaths_5yr~bw_ind+acs_pov_pct+offset(log(dp20_5yr_istexp)),family="poisson",data=x,
+                             ind.area=x$ind.area,
+                             ind.re=x$ind.re,
+                             W=W,burnin=nburn,n.sample=nsamp)
+    
+    
+    sum_bw<-as.data.frame(round(cbind(exp(car_offs1[[1]][1:3,1:3]),exp(car_offs2[[1]][1:3,1:3]),exp(car_offs3[[1]][1:3,1:3])),2))
+    names(sum_bw)<-rep(c('IRR','Lower CL','Upper CL'),3)
+    #rownames(sum_bw)<-c('Intercept','Black (vs NH-White)','Poverty')
+    
+    return(sum_bw)
+}
+
+out_car_rs<-apply_car_rs(adat)
+
+ 
+```
+
+
+# 1. Race-stratified models (1yr)
+
+
+&nbsp;
+&nbsp;
+
+```{r output_rs, echo=FALSE,results='asis'}
+
+## make a table of race-stratified results and print ##
+
+## collapse point estimates and CIs in the tables ##
+out_list_rs<-data.frame('DC'=paste(out_car_rs[,1],paste0('(',apply(out_car_rs[ ,2:3] , 1 , paste0 , collapse = "," ),')')), 'DP19'=paste(out_car_rs[,4],paste0('(',apply(out_car_rs[ ,5:6] , 1 , paste0 , collapse = "," ),')')),'DP20'=paste(out_car_rs[,7],paste0('(',apply(out_car_rs[ ,8:9] , 1 , paste0 , collapse = "," ),')')))
+rownames(out_list_rs)<-c('Intercept','Race','Poverty')
+
+#out_tab_rs<-data.frame('parameter'=c('Intercept','Race','Poverty'),cbind(out_list_rs[[1]],out_list_rs[[2]],out_list_rs[[3]]))
+#rownames(out_tab_rs)<-paste0(rep(2010,each=3),c('a','b','c'))
+
+capture.output(xtable(out_list_rs),file='rs_table.txt')
+
+xtable(out_list_rs)
+
+```
+
+
+
+
+
+
+
+
+

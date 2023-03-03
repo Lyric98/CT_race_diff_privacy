@@ -1,0 +1,14 @@
+% latex table generated in R 4.0.2 by xtable 1.8-4 package
+% Tue Feb 28 00:48:00 2023
+\begin{table}[ht]
+\centering
+\begin{tabular}{rllll}
+  \hline
+ & DC & DP19 & DP20 & DP22 \\ 
+  \hline
+Intercept & 1.82 (1.8,1.84) & 1.84 (1.82,1.87) & 1.83 (1.81,1.85) & 1.82 (1.8,1.84) \\ 
+  Race & 1.08 (1.06,1.11) & 1.08 (1.05,1.1) & 1.08 (1.05,1.1) & 1.08 (1.05,1.1) \\ 
+  Poverty & 1.14 (1.12,1.16) & 1.14 (1.12,1.17) & 1.14 (1.12,1.16) & 1.14 (1.12,1.16) \\ 
+   \hline
+\end{tabular}
+\end{table}

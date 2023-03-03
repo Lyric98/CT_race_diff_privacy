@@ -1,0 +1,1059 @@
+---
+title: "results plots"
+author: "Yanran"
+date: "2022/06/10"
+output: html_document
+---
+
+### boxplot of 3 coefficients $\beta_0$, $\beta_1$, $\beta_2$
+
+```{r message=FALSE, warning=FALSE}
+library(dplyr)
+library(reshape2)
+library(ggplot2)
+library(cowplot)
+library(rstudioapi)
+library(scales)
+library(xtable)
+library(plyr)
+current_path <- getActiveDocumentContext()$path
+setwd(dirname(current_path ))
+
+
+load("./sim/results/coef1.RData")
+ce_sim <- cars
+load("./sim/results/coef19.RData")
+dp_sim <- cars
+load("./sim/results/coef20.RData")
+dp0527_sim <- cars
+load("./sim/results/coef22.RData")
+dp22_sim <- cars
+load("./sim/results/coef8.RData")
+dp0825_sim <- cars
+
+## set working directory to wherever this file is located ##
+current_path <- getActiveDocumentContext()$path
+setwd(dirname(current_path ))
+
+load("./sim/bw_adat5.RData")
+names(adat)
+```
+
+
+```{r message=FALSE, warning=FALSE}
+## coef bias mape##
+ce_sim <- ce_sim %>% mutate(beta0_bias = beta0 - 0) %>% mutate(beta1_bias = beta1 - 0.4) %>% mutate(beta2_bias = beta2 - 0.01) 
+dp_sim <- dp_sim %>% mutate(beta0_bias = beta0 - 0) %>% mutate(beta1_bias = beta1 - 0.4) %>% mutate(beta2_bias = beta2 - 0.01) 
+dp0527_sim <- dp0527_sim %>% mutate(beta0_bias = beta0 - 0) %>% mutate(beta1_bias = beta1 - 0.4) %>% mutate(beta2_bias = beta2 - 0.01)
+dp22_sim <- dp22_sim %>% mutate(beta0_bias = beta0 - 0) %>% mutate(beta1_bias = beta1 - 0.4) %>% mutate(beta2_bias = beta2 - 0.01) 
+dp0825_sim <- dp0825_sim %>% mutate(beta0_bias = beta0 - 0) %>% mutate(beta1_bias = beta1 - 0.4) %>% mutate(beta2_bias = beta2 - 0.01) 
+
+box_compare1 <- ce_sim[,c("beta0_bias", "beta1_bias", "beta2_bias")] 
+#box_compare1 <- ce_sim[,c("beta0", "beta1", "beta2")] 
+box_compare1 <- box_compare1 %>% mutate(Data="DC") 
+#box_compare2 <- dp_sim[,c("beta0", "beta1", "beta2")] 
+box_compare2 <- dp_sim[,c("beta0_bias", "beta1_bias", "beta2_bias")] 
+box_compare2 <- box_compare2 %>% mutate(Data="DP19")
+box_compare3 <- dp0527_sim[,c("beta0_bias", "beta1_bias", "beta2_bias")] 
+#box_compare3 <- dp0527_sim[,c("beta0", "beta1", "beta2")] 
+box_compare3 <- box_compare3 %>% mutate(Data="DP20")
+box_compare4 <- dp22_sim[,c("beta0_bias", "beta1_bias", "beta2_bias")] 
+#box_compare3 <- dp0527_sim[,c("beta0", "beta1", "beta2")] 
+box_compare4 <- box_compare4 %>% mutate(Data="DP22")
+box_compare5 <- dp0825_sim[,c("beta0_bias", "beta1_bias", "beta2_bias")] 
+box_compare5 <- box_compare5 %>% mutate(Data="DP2208")
+box_compare <- melt(rbind(box_compare1, box_compare2, box_compare3, box_compare4, box_compare5))
+
+ggplot(box_compare, aes(x=variable,y=value, fill=Data)) + 
+    geom_boxplot()
+par(mfrow=c(1,3)) 
+box0 <- box_compare[box_compare$variable=="beta0_bias",]
+b0<- ggplot(box0, aes(x=variable,y=value, fill=Data)) + xlab(NULL)+ ylab(NULL)+scale_y_continuous(labels = percent_format())+ggtitle("") +
+    geom_boxplot()
+box1 <- box_compare[box_compare$variable=="beta1_bias",]
+b1<- ggplot(box1, aes(x=variable,y=value, fill=Data)) + xlab(NULL)+ ylab(NULL)+scale_y_continuous(labels = percent_format())+ggtitle("") +
+    geom_boxplot()
+box2 <- box_compare[box_compare$variable=="beta2_bias",]
+b2<- ggplot(box2, aes(x=variable,y=value, fill=Data)) + xlab(NULL) + ylab(NULL)+scale_y_continuous(labels = percent_format())+ggtitle("")+
+    geom_boxplot()
+
+
+
+require(cowplot)
+library(grid)
+library(gridExtra)
+
+legend <- cowplot::get_legend(
+  # create some space to the left of the legend
+  b0+ theme(legend.box.margin = margin(0, 0, 0, 12)))
+
+# add the legend to the row we made earlier. Give it one-third of 
+# the width of one plot (via rel_widths).
+
+
+prow <- plot_grid(
+  b0+ theme(legend.position="none"),
+  b1+ theme(legend.position="none"),
+  b2+ theme(legend.position="none"),
+  align = 'vh',
+  labels = c("Beta0", "Beta1", "Beta2"),
+  hjust = -1,
+  nrow = 1
+)
+#prow
+
+coef_boxplot<-plot_grid(prow,legend, rel_widths = c(3, .4))
+coef_boxplot
+
+mean_bias <- rbind(mean(ce_sim$beta0_bias), mean(ce_sim$beta1_bias), mean(ce_sim$beta2_bias))%>% cbind( rbind(mean(dp_sim$beta0_bias), mean(dp_sim$beta1_bias), mean(dp_sim$beta2_bias))) %>% cbind( rbind(mean(dp0527_sim$beta0_bias), mean(dp0527_sim$beta1_bias), mean(dp0527_sim$beta2_bias)))%>% cbind( rbind(mean(dp22_sim$beta0_bias), mean(dp22_sim$beta1_bias), mean(dp22_sim$beta2_bias)))%>% cbind( rbind(mean(dp0825_sim$beta0_bias), mean(dp0825_sim$beta1_bias), mean(dp0825_sim$beta2_bias)))
+
+colnames(mean_bias)<-c("DC", "DP19", "DP20", "DP22", "DP0825")
+#rownames(mean_bias) <- c()
+xtable(mean_bias,digits = 4)
+```
+
+
+```{r coef CI coverage}
+
+beta0_true <- 0
+beta1_true <- 0.4
+beta2_true <- 0.01
+
+# check CI coverage
+ce_ci_cov0 <- ifelse(beta0_true >= ce_sim$beta0_lo & beta0_true <= ce_sim$beta0_hi, 1, 0)
+ce_ci_cov1 <- ifelse(beta1_true >= ce_sim$beta1_lo & beta1_true <= ce_sim$beta1_hi, 1, 0)
+ce_ci_cov2 <- ifelse(beta2_true >= ce_sim$beta2_lo & beta2_true <= ce_sim$beta2_hi, 1, 0)
+
+dp_ci_cov0 <- ifelse(beta0_true >= dp_sim$beta0_lo & beta0_true <= dp_sim$beta0_hi, 1, 0)
+dp_ci_cov1 <- ifelse(beta1_true >= dp_sim$beta1_lo & beta1_true <= dp_sim$beta1_hi, 1, 0)
+dp_ci_cov2 <- ifelse(beta2_true >= dp_sim$beta2_lo & beta2_true <= dp_sim$beta2_hi, 1, 0)
+
+dp0527_ci_cov0 <- ifelse(beta0_true >= dp0527_sim$beta0_lo & beta0_true <= dp0527_sim$beta0_hi, 1, 0)
+dp0527_ci_cov1 <- ifelse(beta1_true >= dp0527_sim$beta1_lo & beta1_true <= dp0527_sim$beta1_hi, 1, 0)
+dp0527_ci_cov2 <- ifelse(beta2_true >= dp0527_sim$beta2_lo & beta2_true <= dp0527_sim$beta2_hi, 1, 0)
+
+dp22_ci_cov0 <- ifelse(beta0_true >= dp22_sim$beta0_lo & beta0_true <= dp22_sim$beta0_hi, 1, 0)
+dp22_ci_cov1 <- ifelse(beta1_true >= dp22_sim$beta1_lo & beta1_true <= dp22_sim$beta1_hi, 1, 0)
+dp22_ci_cov2 <- ifelse(beta2_true >= dp22_sim$beta2_lo & beta2_true <= dp22_sim$beta2_hi, 1, 0)
+
+dp0825_ci_cov0 <- ifelse(beta0_true >= dp0825_sim$beta0_lo & beta0_true <= dp0825_sim$beta0_hi, 1, 0)
+dp0825_ci_cov1 <- ifelse(beta1_true >= dp0825_sim$beta1_lo & beta1_true <= dp0825_sim$beta1_hi, 1, 0)
+dp0825_ci_cov2 <- ifelse(beta2_true >= dp0825_sim$beta2_lo & beta2_true <= dp0825_sim$beta2_hi, 1, 0)
+
+# check CI coverage
+ce_ci_cov <- c(mean(ce_ci_cov0), mean(ce_ci_cov1), mean(ce_ci_cov2))
+dp_ci_cov <- c(mean(dp_ci_cov0), mean(dp_ci_cov1), mean(dp_ci_cov2))
+dp0527_ci_cov <- c(mean(dp0527_ci_cov0), mean(dp0527_ci_cov1), mean(dp0527_ci_cov2))
+dp22_ci_cov <- c(mean(dp22_ci_cov0), mean(dp22_ci_cov1), mean(dp22_ci_cov2))
+dp0825_ci_cov <- c(mean(dp0825_ci_cov0), mean(dp0825_ci_cov1), mean(dp0825_ci_cov2))
+
+ci_cov <- cbind(ce_ci_cov, dp_ci_cov, dp0527_ci_cov, dp22_ci_cov, dp0825_ci_cov)
+rownames(ci_cov) <- c("beta0", "beta1", "beta2")
+colnames(ci_cov) <- c("DC", "DP19", "DP20", "DP22", "DP0825")
+
+xtable(ci_cov*100, digits = 0)
+
+```
+
+
+
+
+
+```{r coef percent error}
+# percent error = (coef - beta)/beta * 100%
+## coef percent error##
+ce_sim <- ce_sim %>% mutate(beta0_pe = beta0 - 0) %>% mutate(beta1_bias = beta1 - 0.4) %>% mutate(beta2_bias = beta2 - 0.01) 
+dp_sim <- dp_sim %>% mutate(beta0_bias = beta0 - 0) %>% mutate(beta1_bias = beta1 - 0.4) %>% mutate(beta2_bias = beta2 - 0.01) 
+dp0527_sim <- dp0527_sim %>% mutate(beta0_bias = beta0 - 0) %>% mutate(beta1_bias = beta1 - 0.4) %>% mutate(beta2_bias = beta2 - 0.01)
+dp22_sim <- dp22_sim %>% mutate(beta0_bias = beta0 - 0) %>% mutate(beta1_bias = beta1 - 0.4) %>% mutate(beta2_bias = beta2 - 0.01) 
+dp0825_sim <- dp0825_sim %>% mutate(beta0_bias = beta0 - 0) %>% mutate(beta1_bias = beta1 - 0.4) %>% mutate(beta2_bias = beta2 - 0.01) 
+
+# box_compare1 <- ce_sim[,c("beta0_bias", "beta1_bias", "beta2_bias")] 
+# #box_compare1 <- ce_sim[,c("beta0", "beta1", "beta2")] 
+# box_compare1 <- box_compare1 %>% mutate(Data="DC") 
+# #box_compare2 <- dp_sim[,c("beta0", "beta1", "beta2")] 
+# box_compare2 <- dp_sim[,c("beta0_bias", "beta1_bias", "beta2_bias")] 
+# box_compare2 <- box_compare2 %>% mutate(Data="DP19")
+# box_compare3 <- dp0527_sim[,c("beta0_bias", "beta1_bias", "beta2_bias")] 
+# #box_compare3 <- dp0527_sim[,c("beta0", "beta1", "beta2")] 
+# box_compare3 <- box_compare3 %>% mutate(Data="DP20")
+# box_compare4 <- dp22_sim[,c("beta0_bias", "beta1_bias", "beta2_bias")] 
+# #box_compare3 <- dp0527_sim[,c("beta0", "beta1", "beta2")] 
+# box_compare4 <- box_compare4 %>% mutate(Data="DP22")
+# box_compare <- melt(rbind(box_compare1, box_compare2, box_compare3, box_compare4))
+
+
+
+summary_text <- adat %>% mutate(DP19 = (exp_counts_dp-exp_counts_ce)/exp_counts_ce) %>% mutate(DP20 = (exp_counts_dp0527-exp_counts_ce)/exp_counts_ce) %>% mutate(DP22 = (exp_counts_dp22-exp_counts_ce)/exp_counts_ce)%>% mutate(DP2208 = (exp_counts_dp0825-exp_counts_ce)/exp_counts_ce)
+
+box_pe <- melt(summary_text[,c("race", "DP19", "DP20","DP22","DP2208")])
+
+box_pe$race<-mapvalues(box_pe$race,
+                         from=c('white','black'),
+                         to=c('NHW','Black'))
+
+colnames(box_pe) <- c("race", "Data", "value")
+
+fig1 <- ggplot(box_pe, aes(x=race,y=value, fill=Data)) + xlab(NULL) + ylab(NULL)+ggtitle("")+ geom_boxplot(outlier.shape = NA)+ coord_cartesian(ylim=c(-1.2, 1.8))+ ylab(NULL) 
+
+fig1_percent_scale <- ggplot(box_pe, aes(x=race,y=value, fill=Data)) + xlab(NULL) + ylab(NULL)+ggtitle("")+
+#    geom_boxplot()+ 
+   geom_boxplot(outlier.shape = NA)+ 
+  #coord_cartesian(ylim=c(-1.2, 1.8))+ ylab(NULL) +
+scale_y_continuous(labels = percent_format(), limits = c(-1.03, 1.2))
+fig1_percent_scale
+```
+
+
+
+
+
+
+### expected counts scatter plots
+
+```{r scatter plot dp/dp0527 P vs ce Ptrue}
+Ptrue <- matrix(adat$exp_counts_ce)
+P_dp <- matrix(adat$exp_counts_dp)
+colnames(P_dp) <- "DP19"
+P_dp0527 <- matrix(adat$exp_counts_dp0527)
+colnames(P_dp0527) <- c("DP20")
+P_dp22 <- matrix(adat$exp_counts_dp22)
+colnames(P_dp22) <- c("DP22")
+P_dp2208 <- matrix(adat$exp_counts_dp0825)
+colnames(P_dp2208) <- c("DP2208")
+
+# scatter plot of P matrix (ce vs. dp)
+# P_dp_w_GEOID <- cbind(adat[1:2], P_dp, Ptrue) 
+# P_dp0527_w_GEOID <- cbind(adat[1:2], P_dp0527, Ptrue) 
+# P_dp22_w_GEOID <- cbind(adat[1:2], P_dp22, Ptrue) 
+P2_w_GEOID <- cbind(adat[1:2], P_dp, P_dp0527, P_dp22,P_dp2208, Ptrue) 
+
+P_dp_ce <- melt(P2_w_GEOID, id=c("GEOID", "race", "Ptrue"))
+names(P_dp_ce)[3:4] <- c("DC", "Data")
+P_dp_ce_scatter <- ggplot(data = P_dp_ce, mapping = aes(x = DC, y = value, color=Data)) + geom_point(alpha=0.3) + ylab("Expected DP counts") + xlab("Expected DC counts")
+scatter_exp <- P_dp_ce_scatter + facet_wrap(~race,scales="free") + geom_abline(colour="red")
+
+#pdf('scatter_exp.pdf',width=7,height=6)
+# P_dp_ce_scatter2 <- ggplot(data = P_dp_ce, mapping = aes(x = Ptrue, y = value, color=race)) + geom_point(alpha=0.3) + ylab("P_dp")+scale_color_brewer(palette="Dark2")
+# P_dp_ce_scatter2 + facet_wrap(~variable) + geom_abline(colour="grey")
+
+```
+
+Average difference of expected counts
+
+```{r}
+mean(P_dp-Ptrue)
+mean(P_dp0527-Ptrue)
+mean(P_dp22-Ptrue)
+mean(P_dp2208-Ptrue)
+# mean and standard deviation of the differences in the CT-level DP and DC expected counts for the NHW population are XX for DP19
+
+summary_text <- adat %>% mutate(diff19 = exp_counts_dp-exp_counts_ce) %>% mutate(diff20 = exp_counts_dp0527-exp_counts_ce)%>% mutate(diff22 = exp_counts_dp22-exp_counts_ce)%>% mutate(diff2208 = exp_counts_dp0825-exp_counts_ce)
+
+diff19_w <- summary_text[summary_text$race=="white",]$diff19
+diff19_b <- summary_text[summary_text$race=="black",]$diff19
+
+diff20_w <- summary_text[summary_text$race=="white",]$diff20
+diff20_b <- summary_text[summary_text$race=="black",]$diff20
+
+diff22_w <- summary_text[summary_text$race=="white",]$diff22
+diff22_b <- summary_text[summary_text$race=="black",]$diff22
+
+diff2208_w <- summary_text[summary_text$race=="white",]$diff2208
+diff2208_b <- summary_text[summary_text$race=="black",]$diff2208
+
+huizong = function(d){
+  hz <- c(mean(d),sd(d))
+  return((hz))
+ }
+
+huizong(diff19_w)
+huizong(diff19_b)
+huizong(diff20_w)
+huizong(diff20_b)
+huizong(diff22_w)
+huizong(diff22_b)
+huizong(diff2208_w)
+huizong(diff2208_b)
+```
+
+
+```{r percent error}
+# percent error = (expectedDP - expectedDC)/expectedDC * 100%
+summary_text <- adat %>% mutate(DP19 = (exp_counts_dp-exp_counts_ce)/exp_counts_ce) %>% mutate(DP20 = (exp_counts_dp0527-exp_counts_ce)/exp_counts_ce) %>% mutate(DP22 = (exp_counts_dp22-exp_counts_ce)/exp_counts_ce)%>% mutate(DP2208 = (exp_counts_dp0825-exp_counts_ce)/exp_counts_ce)
+
+box_pe <- melt(summary_text[,c("race", "DP19", "DP20","DP22","DP2208")])
+
+box_pe$race<-mapvalues(box_pe$race,
+                         from=c('white','black'),
+                         to=c('NHW','Black'))
+
+colnames(box_pe) <- c("race", "Data", "value")
+
+fig1 <- ggplot(box_pe, aes(x=race,y=value, fill=Data)) + xlab(NULL) + ylab(NULL)+ggtitle("")+ geom_boxplot(outlier.shape = NA)+ coord_cartesian(ylim=c(-0.8, 0.8))+ ylab(NULL) 
+
+fig1_percent_scale <- ggplot(box_pe, aes(x=race,y=value, fill=Data)) + xlab(NULL) + ylab(NULL)+ggtitle("")+
+#    geom_boxplot()+ 
+   geom_boxplot(outlier.shape = NA)+ 
+  #coord_cartesian(ylim=c(-1.2, 1.8))+ ylab(NULL) +
+scale_y_continuous(labels = percent_format(), limits = c(-0.5, 0.5))
+fig1_percent_scale
+pdf('fig1_percent_scale_ga',width=7,height=6)
+
+pe19_w <- summary_text[summary_text$race=="white",]$DP19
+pe19_b <- summary_text[summary_text$race=="black",]$DP19
+
+pe20_w <- summary_text[summary_text$race=="white",]$DP20
+pe20_b <- summary_text[summary_text$race=="black",]$DP20
+
+pe22_w <- summary_text[summary_text$race=="white",]$DP22
+pe22_b <- summary_text[summary_text$race=="black",]$DP22
+
+pe2208_w <- summary_text[summary_text$race=="white",]$DP2208
+pe2208_b <- summary_text[summary_text$race=="black",]$DP2208
+
+
+summary_pe_under <- rbind(mean(pe19_w<0), mean(pe19_b<0))%>% cbind( rbind(mean(pe20_w<0), mean(pe20_b<0))) %>% cbind( rbind(mean(pe22_w<0), mean(pe22_b<0)))%>% cbind( rbind(mean(pe2208_w<0), mean(pe2208_b<0)))
+summary_pe_under <- summary_pe_under*100
+colnames(summary_pe_under)<-c("DP19", "DP20", "DP22", "DP2208")
+rownames(summary_pe_under) <- c("NHW", "Black")
+xtable(summary_pe_under,digits = 4)
+
+```
+
+
+
+
+### boxplot of comparasion for the SMR estimates using the census denominators with the true SMRs
+
+```{r sim_from_cluster2}
+
+load("./sim/results/fitted_value20.RData")
+dp0527_fit <- fitted_values
+dp0527_fit_mean <- apply(dp0527_fit, 2, mean)
+load("./sim/results/fitted_value19.RData")
+dp_fit <- fitted_values
+dp_fit_mean <- apply(dp_fit, 2, mean)
+load("./sim/results/fitted_value1.RData")
+ce_fit <- fitted_values
+ce_fit_mean <- apply(ce_fit, 2, mean)
+load("./sim/results/fitted_value22.RData")
+dp22_fit <- fitted_values
+dp22_fit_mean <- apply(dp22_fit, 2, mean)
+load("./sim/results/fitted_value8.RData")
+dp2208_fit <- fitted_values
+dp2208_fit_mean <- apply(dp2208_fit, 2, mean)
+
+load("./sim/results/exp_theta20.RData")
+true_smrs_dp20 = exp_theta
+load("./sim/results/exp_theta19.RData")
+true_smrs_dp19 = exp_theta
+load("./sim/results/exp_theta1.RData")
+true_smrs_ce = exp_theta
+load("./sim/results/exp_theta22.RData")
+true_smrs_dp22 = exp_theta
+load("./sim/results/exp_theta8.RData")
+true_smrs_dp2208 = exp_theta
+
+# compute smrdps
+current_path <- getActiveDocumentContext()$path
+setwd(dirname(current_path))
+load("./sim/bw_adat5.RData")
+
+# old dp
+exp_counts_dp19 = data.frame(t(matrix(rep(adat$exp_counts_dp,100),c(length(adat$exp_counts_dp),100))))
+smrdp19 = dp_fit/exp_counts_dp19
+mape_ij_dp19 = colSums(abs((smrdp19-true_smrs_dp19)/true_smrs_dp19))/100
+# 2020-05-27 dp
+exp_counts_dp20 = data.frame(t(matrix(rep(adat$exp_counts_dp0527,100),c(length(adat$exp_counts_dp0527),100))))
+smrdp20 = dp0527_fit/exp_counts_dp20
+mape_ij_dp20 = colSums(abs((smrdp20-true_smrs_dp20)/true_smrs_dp20))/100
+# ce
+exp_counts_ce = data.frame(t(matrix(rep(adat$exp_counts_ce,100),c(length(adat$exp_counts_ce),100))))
+smrce = ce_fit/exp_counts_ce
+mape_ij_ce = colSums(abs((smrce-true_smrs_ce)/true_smrs_ce))/100
+# 2022-03-16 dp
+exp_counts_dp22 = data.frame(t(matrix(rep(adat$exp_counts_dp22,100),c(length(adat$exp_counts_dp22),100))))
+smrdp22 = dp22_fit/exp_counts_dp22
+mape_ij_dp22 = colSums(abs((smrdp22-true_smrs_dp22)/true_smrs_dp22))/100
+# 2022-08-25 dp
+exp_counts_dp2208 = data.frame(t(matrix(rep(adat$exp_counts_dp0825,100),c(length(adat$exp_counts_dp0825),100))))
+smrdp2208 = dp2208_fit/exp_counts_dp2208
+mape_ij_dp2208 = colSums(abs((smrdp2208-true_smrs_dp2208)/true_smrs_dp2208))/100
+
+
+
+
+```
+
+
+
+```{r MAPE boxplot2}
+# looking at boxplots of the mean absolute percentage error of the SMRs for each CT/race group (relative to ce)
+smr_mape <- cbind(adat[1:2], mape_ij_ce, mape_ij_dp19, mape_ij_dp20, mape_ij_dp22, mape_ij_dp2208) 
+smr_mape_box <- smr_mape[,c("GEOID", "race", "mape_ij_ce","mape_ij_dp19","mape_ij_dp20", "mape_ij_dp22", "mape_ij_dp2208")]
+names(smr_mape_box) <- c("GEOID", "race", "DC","DP19","DP20", "DP22", "DP2208")
+
+melt_mape <- melt(smr_mape_box)
+names(melt_mape)<-c("GEOID","race","Data","value")
+smr_mape_bw_woo <- ggplot(melt_mape, aes(x=race,y=value, fill=Data)) + 
+    geom_boxplot(outlier.shape = NA)+ylab("MAPE")+
+scale_y_continuous(labels = percent_format(), limits = c(0, 1.0))+ggtitle("")
+
+# old dp
+bias_ij_dp19 = colSums(smrdp19-true_smrs_dp19)/100
+# 2020-05-27 dp
+bias_ij_dp20 = colSums(smrdp20-true_smrs_dp20)/100
+# 2022-03-16 dp
+bias_ij_dp22 = colSums(smrdp22-true_smrs_dp22)/100
+# 2022-08-25 dp
+bias_ij_dp2208 = colSums(smrdp2208-true_smrs_dp2208)/100
+# ce
+bias_ij_ce = colSums(smrce-true_smrs_ce)/100
+
+# looking at boxplots of the mean absolute percentage error of the SMRs for each CT/race group (relative to ce)
+smr_bias <- cbind(adat[1:2], bias_ij_ce, bias_ij_dp19, bias_ij_dp20, bias_ij_dp22, bias_ij_dp2208) 
+smr_bias_box <- smr_bias[,c("GEOID", "race", "bias_ij_ce","bias_ij_dp19","bias_ij_dp20", "bias_ij_dp22", "bias_ij_dp2208")]
+
+smr_bias_bw_woo <- ggplot(melt(smr_bias_box), aes(x=race,y=value, fill=variable)) + 
+    geom_boxplot(outlier.shape = NA)+ylab("Bias")+ coord_cartesian(ylim=c(-0.5, 0.7))+ ylab(NULL) 
+
+require(cowplot)
+library(grid)
+library(gridExtra)
+
+legend <- cowplot::get_legend(
+  # create some space to the left of the legend
+  smr_mape_bw_woo+ theme(legend.box.margin = margin(0, 0, 0, 12)))
+
+prow <- plot_grid(
+  smr_bias_bw_woo+ theme(legend.position="none"),
+  smr_mape_bw_woo+ theme(legend.position="none"),
+  align = 'vh',
+  labels = c("Bias", "MAPE"),
+  hjust = -1,
+  nrow = 1
+)
+
+smr_mape_bias <-cowplot::plot_grid(prow,legend, rel_widths = c(3, .4))
+smr_mape_bias
+
+```
+
+
+
+```{r appendix tables}
+bias10_w <- smr_bias[smr_bias$race=="white",]$bias_ij_ce
+bias10_b <- smr_bias[smr_bias$race=="black",]$bias_ij_ce
+
+bias19_w <- smr_bias[smr_bias$race=="white",]$bias_ij_dp19
+bias19_b <- smr_bias[smr_bias$race=="black",]$bias_ij_dp19
+
+bias20_w <- smr_bias[smr_bias$race=="white",]$bias_ij_dp20
+bias20_b <- smr_bias[smr_bias$race=="black",]$bias_ij_dp20
+
+bias22_w <- smr_bias[smr_bias$race=="white",]$bias_ij_dp22
+bias22_b <- smr_bias[smr_bias$race=="black",]$bias_ij_dp22
+
+bias2208_w <- smr_bias[smr_bias$race=="white",]$bias_ij_dp2208
+bias2208_b <- smr_bias[smr_bias$race=="black",]$bias_ij_dp2208
+
+huizong(bias10_w)
+huizong(bias10_b)
+huizong(bias19_w)
+huizong(bias19_b)
+huizong(bias20_w)
+huizong(bias20_b)
+huizong(bias22_w)
+huizong(bias22_b)
+huizong(bias2208_w)
+huizong(bias2208_b)
+
+# percentage of upward biases
+upward_bias <- rbind(mean(bias10_w>0), mean(bias10_b>0))%>% cbind( rbind(mean(bias19_w>0), mean(bias19_b>0)))%>% cbind( rbind(mean(bias20_w>0), mean(bias20_b>0))) %>% cbind( rbind(mean(bias22_w>0), mean(bias22_b>0)))%>% cbind( rbind(mean(bias2208_w>0), mean(bias2208_b>0)))
+upward_bias <- upward_bias*100
+colnames(upward_bias)<-c("DC","DP19", "DP20", "DP22", "DP2208")
+rownames(upward_bias) <- c("NHW", "Black")
+xtable(upward_bias,digits = 4)
+
+# average biases
+avg_bias <- rbind(mean(bias10_w), mean(bias10_b))%>% cbind( rbind(mean(bias19_w), mean(bias19_b)))%>% cbind( rbind(mean(bias20_w), mean(bias20_b))) %>% cbind( rbind(mean(bias22_w), mean(bias22_b)))%>% cbind( rbind(mean(bias2208_w), mean(bias2208_b)))
+
+colnames(avg_bias)<-c("DC","DP19", "DP20", "DP22", "DP2208")
+rownames(avg_bias) <- c("NHW", "Black")
+xtable(avg_bias,digits = 4)
+
+# average mapes
+
+mape10_w <- smr_mape[smr_mape$race=="white",]$mape_ij_ce
+mape10_b <- smr_mape[smr_mape$race=="black",]$mape_ij_ce
+
+mape19_w <- smr_mape[smr_mape$race=="white",]$mape_ij_dp19
+mape19_b <- smr_mape[smr_mape$race=="black",]$mape_ij_dp19
+
+mape20_w <- smr_mape[smr_mape$race=="white",]$mape_ij_dp20
+mape20_b <- smr_mape[smr_mape$race=="black",]$mape_ij_dp20
+
+mape22_w <- smr_mape[smr_mape$race=="white",]$mape_ij_dp22
+mape22_b <- smr_mape[smr_mape$race=="black",]$mape_ij_dp22
+
+mape2208_w <- smr_mape[smr_mape$race=="white",]$mape_ij_dp2208
+mape2208_b <- smr_mape[smr_mape$race=="black",]$mape_ij_dp2208
+
+huizong(mape10_w)
+huizong(mape10_b)
+huizong(mape19_w)
+huizong(mape19_b)
+huizong(mape20_w)
+huizong(mape20_b)
+huizong(mape22_w)
+huizong(mape22_b)
+huizong(mape2208_w)
+huizong(mape2208_b)
+
+avg_mape <- rbind(mean(mape10_w), mean(mape10_b))%>% cbind( rbind(mean(mape19_w), mean(mape19_b)))%>% cbind( rbind(mean(mape20_w), mean(mape20_b))) %>% cbind( rbind(mean(mape22_w), mean(mape22_b)))%>% cbind( rbind(mean(mape2208_w), mean(mape2208_b)))
+
+colnames(avg_mape)<-c("DC","DP19", "DP20", "DP22", "DP2208")
+rownames(avg_mape) <- c("NHW", "Black")
+xtable(avg_mape,digits = 4)
+
+
+
+```
+
+### maps of MAPE for 2020-05-27 version
+
+```{r}
+#### MAPE0527 plot
+load('./sim/bw_adat5.RData')
+adat <- cbind(adat, mape_ij_dp20)[,c(1, 2, 9)] #2877*4
+
+
+## put in wide format to merge with the shapefile ##
+adat_wide<-merge(adat[which(adat$race=='white'),],adat[which(adat$race=='black'),],by='GEOID',suffixes=c('_w','_b'))
+#  1418*7
+
+## extract CT shapefile ##
+ga_shp<-tracts(state = 'GA',year=2010)
+
+## merge with pop and rate data ##
+ga_shp<-merge(ga_shp,adat_wide,by.x='GEOID10',by.y='GEOID',all.x=T)
+
+## put in sf format to use nice mapping packages ##
+ga_shp<-st_as_sf(ga_shp)  # 1969 *19
+
+
+shp_plot0527<-gather(ga_shp,'race','fit0527_mape',
+                 c(mape_ij_dp20_w,mape_ij_dp20_b),factor_key = T)
+
+shp_plot0527$race<-mapvalues(shp_plot0527$race,
+                         from=c('mape_ij_dp20_w','mape_ij_dp20_b'),
+                         to=c('NHW','Black'))
+#quantile(shp_plot0527$fit0527_mape, na.rm = T)
+# 0.1589031 0.3059507 0.5038545 0.6941363 1.7476195 
+#ma_q<-c(0,0.21,0.466, 0.722, 0.978,1.234,1.49,max(shp_plot0527$fit0527_mape,na.rm = T)+1)
+ga_q<-c(0,0.130, 0.297, 0.464, 0.631, 0.798,0.965,max(shp_plot0527$fit0527_mape,na.rm = T)+1)
+
+shp_plot0527$exp_factor<-cut(shp_plot0527$fit0527_mape,breaks=ga_q,
+                             labels=c('<0.130','[0.130,0.297)','[0.297,0.464)','[0.464,0.631)','[0.631,0.798)',
+                                      '[0.798,0.965)','0.965+'),right=F)
+
+## race-stratified expected counts, MA ##
+ga_maps0527<-ggplot(shp_plot0527, aes(fill = exp_factor)) +
+  geom_sf(colour=NA) +
+  scale_fill_brewer(palette = "YlOrRd")+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        legend.title=element_blank(),text=element_text(size=18))+
+  facet_wrap(~ race)
+ga_maps0527
+# ## read in boston shapefiles ##
+# bos_shp<-st_read('boston_ct/Census_2010_Tracts.shp')
+# bos_shp<-merge(bos_shp,adat_wide,by.x='GEOID10',by.y='GEOID',all.x=T)
+# 
+# bos_bbox<-as.numeric(st_bbox(bos_shp))
+# 
+# xlim<-c(bos_bbox[1], bos_bbox[1]+.4*(bos_bbox[3]-bos_bbox[1]))
+# ylim<-c(bos_bbox[2], bos_bbox[2]+.8*(bos_bbox[4]-bos_bbox[2]))
+# 
+# ## remove CTs with zero population (these are the islands off the MA coast) ##
+# #bos_shp<-bos_shp[which(bos_shp$exp_counts_ce_w!="NA" | bos_shp$exp_counts_ce_b!="NA"),]
+# 
+# ## long form by race ##
+# shp_plot0527<-gather(bos_shp,'race','fit0527_mape',
+#                  c(mape_ij_dp20_w,mape_ij_dp20_b),factor_key = T)
+# 
+# shp_plot0527$race<-mapvalues(shp_plot0527$race,
+#                          from=c('mape_ij_dp20_w','mape_ij_dp20_b'),
+#                          to=c('NHW','Black'))
+# 
+# shp_plot0527$exp_factor<-cut(shp_plot0527$fit0527_mape,breaks=ma_q,
+#                              labels=c('<0.210','[0.210,0.466)','[0.466,0.722)','[0.722,0.978)','[0.978,1.234)',
+#                                       '[1.234,1.490)','1.490+'),right=F)
+# 
+# ## race-stratified expected counts, BOS ##  
+# bos_maps0527<-ggplot(shp_plot0527, aes(fill = exp_factor)) +
+#   geom_sf(colour=NA) +
+#   coord_sf(xlim=xlim,ylim=ylim)+
+#   scale_fill_brewer(palette = "YlOrRd")+
+#   theme(axis.title.x=element_blank(),
+#         axis.text.x=element_blank(),
+#         axis.ticks.x=element_blank(),
+#         axis.title.y=element_blank(),
+#         axis.text.y=element_blank(),
+#         axis.ticks.y=element_blank(),
+#         panel.grid.major = element_line(colour = 'transparent'),
+#         panel.grid.minor = element_line(colour = 'transparent'),
+#         legend.title=element_blank(),text=element_text(size=18))+
+#   facet_wrap(~ race)
+# 
+# m0527<-cowplot::plot_grid(ga_maps0527,bos_maps0527,ncol=1)
+# 
+# ## save to pdf ##
+# pdf('maps_mape0527.pdf',width=7,height=6)
+# print(m0527)
+
+
+```
+### maps of bias for 2020-05-27 version
+
+```{r}
+#### bias0527 plot
+coast <- c("9900")
+
+
+load('./sim/bw_adat5.RData')
+adat <- cbind(adat, bias_ij_dp20)[,c(1, 2, 9)] #2877*4
+
+
+## put in wide format to merge with the shapefile ##
+adat_wide<-merge(adat[which(adat$race=='white'),],adat[which(adat$race=='black'),],by='GEOID',suffixes=c('_w','_b'))
+#  1418*7
+
+## extract CT shapefile ##
+ga_shp<-tracts(state = 'GA',year=2010)
+
+## merge with pop and rate data ##
+ga_shp<-merge(ga_shp,adat_wide,by.x='GEOID10',by.y='GEOID',all.x=T)
+
+## put in sf format to use nice mapping packages ##
+ga_shp<-st_as_sf(ga_shp)  #1478*21
+
+## remove CTs with zero population (these are the islands off the MA coast) ##
+ga_shp<-ga_shp[!ga_shp$NAME10 %in% coast,]
+
+shp_plot0527<-gather(ga_shp,'race','fit0527_bias',
+                 c(bias_ij_dp20_w,bias_ij_dp20_b),factor_key = T)
+
+shp_plot0527$race<-mapvalues(shp_plot0527$race,
+                         from=c('bias_ij_dp20_w','bias_ij_dp20_b'),
+                         to=c('NHW','Black'))
+# quantile(shp_plot0527$fit0527_bias, na.rm = T)
+# -1.21238734 -0.06270235  0.03549275  0.14697380  7.08009385 
+# sort(shp_plot0527$fit0527_bias, decreasing = TRUE)
+#   [1] 7.08009385 1.78895720
+
+# quantile(shp_plot0527$fit0527_bias, na.rm = T)
+#          0%         25%         50%         75%        100% 
+# -1.52844268 -0.07608223  0.01370606  0.10716957  3.22715206 
+
+# ga_q<-c(min(shp_plot0527$fit0527_bias,na.rm = T)-1,-0.116, -0.070, -0.023,  0.023, 0.070,  0.116,max(shp_plot0527$fit0527_bias,na.rm = T)+1)
+
+#sort(shp_plot0527$fit0527_bias, decreasing = TRUE)
+#[1] 3.2271521 1.1510150
+ga_q<-c(min(shp_plot0527$fit0527_bias,na.rm = T)-1,-0.104,-0.062, -0.020, 0.021,0.063,0.105,max(shp_plot0527$fit0527_bias,na.rm = T)+1)
+
+shp_plot0527$exp_factor<-cut(shp_plot0527$fit0527_bias,breaks=ga_q,
+                              labels=c('<-0.104','[-0.104, -0.062)','[ -0.062,-0.020)','[-0.020,0.021)','[0.021,0.063)',
+                                      '[0.063,0.105)','0.105+'),right=F)
+
+## race-stratified expected counts, MA ##
+ga_maps0527<-ggplot(shp_plot0527, aes(fill = exp_factor)) +
+  geom_sf(colour=NA) +
+  scale_fill_brewer(palette = "BrBG", na.value = "black")+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        legend.title=element_blank(),text=element_text(size=18))+
+  facet_wrap(~ race)
+ga_maps0527
+# ## read in boston shapefiles ##
+# bos_shp<-st_read('boston_ct/Census_2010_Tracts.shp')
+# bos_shp<-merge(bos_shp,adat_wide,by.x='GEOID10',by.y='GEOID',all.x=T)
+# 
+# bos_bbox<-as.numeric(st_bbox(bos_shp))
+# 
+# xlim<-c(bos_bbox[1], bos_bbox[1]+.4*(bos_bbox[3]-bos_bbox[1]))
+# ylim<-c(bos_bbox[2], bos_bbox[2]+.8*(bos_bbox[4]-bos_bbox[2]))
+# 
+# # remove CTs with zero population (these are the islands off the MA coast) ##
+# bos_shp<-bos_shp[!bos_shp$NAME10 %in% coast,]
+# 
+# 
+# ## long form by race ##
+# shp_plot0527<-gather(bos_shp,'race','fit0527_bias',
+#                  c(bias_ij_dp20_w,bias_ij_dp20_b),factor_key = T)
+# 
+# shp_plot0527$race<-mapvalues(shp_plot0527$race,
+#                          from=c('bias_ij_dp20_w','bias_ij_dp20_b'),
+#                          to=c('NHW','Black'))
+# # quantile(shp_plot0527$fit0527_bias, na.rm=TRUE)
+# # -0.88785804 -0.10397695  0.03460298  0.20137904  7.08009385
+# 
+# shp_plot0527$exp_factor<-cut(shp_plot0527$fit0527_bias,breaks=ma_q,
+#                              labels=c('<-0.104','[-0.104, -0.062)','[ -0.062,-0.020)','[-0.020,0.021)','[0.021,0.063)',
+#                                       '[0.063,0.105)','0.105+'),right=F)
+# 
+# ## race-stratified expected counts, BOS ##  
+# bos_maps0527<-ggplot(shp_plot0527, aes(fill = exp_factor)) +
+#   geom_sf(colour=NA) +
+#   coord_sf(xlim=xlim,ylim=ylim)+
+#   scale_fill_brewer(palette = "BrBG", na.value = "black")+
+#   theme(axis.title.x=element_blank(),
+#         axis.text.x=element_blank(),
+#         axis.ticks.x=element_blank(),
+#         axis.title.y=element_blank(),
+#         axis.text.y=element_blank(),
+#         axis.ticks.y=element_blank(),
+#         panel.grid.major = element_line(colour = 'transparent'),
+#         panel.grid.minor = element_line(colour = 'transparent'),
+#         legend.title=element_blank(),text=element_text(size=18))+
+#   facet_wrap(~ race)
+# 
+# m0527<-cowplot::plot_grid(ma_maps0527,bos_maps0527,ncol=1)
+# 
+# ## save to pdf ##
+# #pdf('maps_mape0527.pdf',width=7,height=6)
+# print(m0527)
+
+
+```
+
+### maps of bias for 2022-03-16 version
+
+
+```{r}
+#### bias0316 plot
+load('bw_adat.RData')
+adat <- cbind(adat, bias_ij_dp22)[,c(1, 2, 8)] #2877*4
+
+
+## put in wide format to merge with the shapefile ##
+adat_wide<-merge(adat[which(adat$race=='white'),],adat[which(adat$race=='black'),],by='GEOID',suffixes=c('_w','_b'))
+#  1418*7
+
+## extract CT shapefile ##
+ma_shp<-tracts(state = 'MA',year=2010)
+
+## merge with pop and rate data ##
+ma_shp<-merge(ma_shp,adat_wide,by.x='GEOID10',by.y='GEOID',all.x=T)
+
+## put in sf format to use nice mapping packages ##
+ma_shp<-st_as_sf(ma_shp)  #1478*21
+
+## remove CTs with zero population (these are the islands off the MA coast) ##
+ma_shp<-ma_shp[!ma_shp$NAME10 %in% coast,]
+
+shp_plot22<-gather(ma_shp,'race','fit22_bias',
+                 c(bias_ij_dp22_w,bias_ij_dp22_b),factor_key = T)
+
+shp_plot22$race<-mapvalues(shp_plot22$race,
+                         from=c('bias_ij_dp22_w','bias_ij_dp22_b'),
+                         to=c('NHW','Black'))
+# quantile(shp_plot0527$fit0527_bias, na.rm = T)
+# -1.21238734 -0.06270235  0.03549275  0.14697380  7.08009385 
+# sort(shp_plot0527$fit0527_bias, decreasing = TRUE)
+#   [1] 7.08009385 1.78895720
+
+ma_q<-c(min(shp_plot22$fit22_bias,na.rm = T)-1,-0.104,-0.062, -0.020, 0.021,0.063,0.105,max(shp_plot22$fit22_bias,na.rm = T)+1)
+
+
+shp_plot22$exp_factor<-cut(shp_plot22$fit22_bias,breaks=ma_q,
+                              labels=c('<-0.104','[-0.104, -0.062)','[ -0.062,-0.020)','[-0.020,0.021)','[0.021,0.063)',
+                                      '[0.063,0.105)','0.105+'),right=F)
+
+## race-stratified expected counts, MA ##
+ma_maps22<-ggplot(shp_plot22, aes(fill = exp_factor)) +
+  geom_sf(colour=NA) +
+  scale_fill_brewer(palette = "BrBG", na.value = "black")+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        legend.title=element_blank(),text=element_text(size=18))+
+  facet_wrap(~ race)
+ma_maps22
+## read in boston shapefiles ##
+bos_shp<-st_read('boston_ct/Census_2010_Tracts.shp')
+bos_shp<-merge(bos_shp,adat_wide,by.x='GEOID10',by.y='GEOID',all.x=T)
+
+bos_bbox<-as.numeric(st_bbox(bos_shp))
+
+xlim<-c(bos_bbox[1], bos_bbox[1]+.4*(bos_bbox[3]-bos_bbox[1]))
+ylim<-c(bos_bbox[2], bos_bbox[2]+.8*(bos_bbox[4]-bos_bbox[2]))
+
+# remove CTs with zero population (these are the islands off the MA coast) ##
+bos_shp<-bos_shp[!bos_shp$NAME10 %in% coast,]
+
+## long form by race ##
+shp_plot22<-gather(bos_shp,'race','fit22_bias',
+                 c(bias_ij_dp22_w,bias_ij_dp22_b),factor_key = T)
+
+shp_plot22$race<-mapvalues(shp_plot22$race,
+                         from=c('bias_ij_dp22_w','bias_ij_dp22_b'),
+                         to=c('NHW','Black'))
+# quantile(shp_plot0527$fit0527_bias, na.rm=TRUE)
+# -0.88785804 -0.10397695  0.03460298  0.20137904  7.08009385
+
+shp_plot22$exp_factor<-cut(shp_plot22$fit22_bias,breaks=ma_q,
+                             labels=c('<-0.104','[-0.104, -0.062)','[ -0.062,-0.020)','[-0.020,0.021)','[0.021,0.063)',
+                                      '[0.063,0.105)','0.105+'),right=F)
+
+## race-stratified expected counts, BOS ##  
+bos_maps22<-ggplot(shp_plot22, aes(fill = exp_factor)) +
+  geom_sf(colour=NA) +
+  coord_sf(xlim=xlim,ylim=ylim)+
+  scale_fill_brewer(palette = "BrBG", na.value = "black")+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        legend.title=element_blank(),text=element_text(size=18))+
+  facet_wrap(~ race)
+
+m22<-cowplot::plot_grid(ma_maps22,bos_maps22,ncol=1)
+
+print(m22)
+
+
+```
+
+
+### maps of MAPE for 2022-08-25 version
+
+```{r}
+#### MAPE0527 plot
+load('bw_adat5.RData')
+adat <- cbind(adat, mape_ij_dp2208)[,c(1, 2, 9)] #2877*4
+
+
+## put in wide format to merge with the shapefile ##
+adat_wide<-merge(adat[which(adat$race=='white'),],adat[which(adat$race=='black'),],by='GEOID',suffixes=c('_w','_b'))
+#  1418*5
+
+## extract CT shapefile ##
+ma_shp<-tracts(state = 'MA',year=2010)
+
+## merge with pop and rate data ##
+ma_shp<-merge(ma_shp,adat_wide,by.x='GEOID10',by.y='GEOID',all.x=T)
+
+## put in sf format to use nice mapping packages ##
+ma_shp<-st_as_sf(ma_shp)  #1478*21
+
+
+shp_plot2208<-gather(ma_shp,'race','fit2208_mape',
+                 c(mape_ij_dp2208_w,mape_ij_dp2208_b),factor_key = T)
+
+shp_plot2208$race<-mapvalues(shp_plot2208$race,
+                         from=c('mape_ij_dp2208_w','mape_ij_dp2208_b'),
+                         to=c('NHW','Black'))
+#quantile(shp_plot0527$fit0527_mape, na.rm = T)
+# 0.1589031 0.3059507 0.5038545 0.6941363 1.7476195 
+ma_q<-c(0,0.21,0.466, 0.722, 0.978,1.234,1.49,max(shp_plot2208$fit2208_mape,na.rm = T)+1)
+
+
+shp_plot2208$exp_factor<-cut(shp_plot2208$fit2208_mape,breaks=ma_q,
+                             labels=c('<0.210','[0.210,0.466)','[0.466,0.722)','[0.722,0.978)','[0.978,1.234)',
+                                      '[1.234,1.490)','1.490+'),right=F)
+
+## race-stratified expected counts, MA ##
+ma_maps2208<-ggplot(shp_plot2208, aes(fill = exp_factor)) +
+  geom_sf(colour=NA) +
+  scale_fill_brewer(palette = "YlOrRd")+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        legend.title=element_blank(),text=element_text(size=18))+
+  facet_wrap(~ race)
+
+## read in boston shapefiles ##
+bos_shp<-st_read('boston_ct/Census_2010_Tracts.shp')
+bos_shp<-merge(bos_shp,adat_wide,by.x='GEOID10',by.y='GEOID',all.x=T)
+
+bos_bbox<-as.numeric(st_bbox(bos_shp))
+
+xlim<-c(bos_bbox[1], bos_bbox[1]+.4*(bos_bbox[3]-bos_bbox[1]))
+ylim<-c(bos_bbox[2], bos_bbox[2]+.8*(bos_bbox[4]-bos_bbox[2]))
+
+## remove CTs with zero population (these are the islands off the MA coast) ##
+#bos_shp<-bos_shp[which(bos_shp$exp_counts_ce_w!="NA" | bos_shp$exp_counts_ce_b!="NA"),]
+
+## long form by race ##
+shp_plot2208<-gather(bos_shp,'race','fit2208_mape',
+                 c(mape_ij_dp2208_w,mape_ij_dp2208_b),factor_key = T)
+
+shp_plot2208$race<-mapvalues(shp_plot2208$race,
+                         from=c('mape_ij_dp2208_w','mape_ij_dp2208_b'),
+                         to=c('NHW','Black'))
+
+shp_plot2208$exp_factor<-cut(shp_plot2208$fit2208_mape,breaks=ma_q,
+                             labels=c('<0.210','[0.210,0.466)','[0.466,0.722)','[0.722,0.978)','[0.978,1.234)',
+                                      '[1.234,1.490)','1.490+'),right=F)
+
+## race-stratified expected counts, BOS ##  
+bos_maps2208<-ggplot(shp_plot2208, aes(fill = exp_factor)) +
+  geom_sf(colour=NA) +
+  coord_sf(xlim=xlim,ylim=ylim)+
+  scale_fill_brewer(palette = "YlOrRd")+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        legend.title=element_blank(),text=element_text(size=18))+
+  facet_wrap(~ race)
+
+m2208<-cowplot::plot_grid(ma_maps2208,bos_maps2208,ncol=1)
+
+
+
+```
+
+
+### maps of bias for 2022-08-25 version
+
+
+```{r}
+#### bias0316 plot
+load('bw_adat.RData')
+adat <- cbind(adat, bias_ij_dp2208)[,c(1, 2, 8)] #2877*4
+
+
+## put in wide format to merge with the shapefile ##
+adat_wide<-merge(adat[which(adat$race=='white'),],adat[which(adat$race=='black'),],by='GEOID',suffixes=c('_w','_b'))
+#  1418*7
+
+## extract CT shapefile ##
+ma_shp<-tracts(state = 'MA',year=2010)
+
+## merge with pop and rate data ##
+ma_shp<-merge(ma_shp,adat_wide,by.x='GEOID10',by.y='GEOID',all.x=T)
+
+## put in sf format to use nice mapping packages ##
+ma_shp<-st_as_sf(ma_shp)  #1478*21
+
+## remove CTs with zero population (these are the islands off the MA coast) ##
+ma_shp<-ma_shp[!ma_shp$NAME10 %in% coast,]
+
+shp_plot2208<-gather(ma_shp,'race','fit2208_bias',
+                 c(bias_ij_dp2208_w,bias_ij_dp2208_b),factor_key = T)
+
+shp_plot2208$race<-mapvalues(shp_plot2208$race,
+                         from=c('bias_ij_dp2208_w','bias_ij_dp2208_b'),
+                         to=c('NHW','Black'))
+# quantile(shp_plot0527$fit0527_bias, na.rm = T)
+# -1.21238734 -0.06270235  0.03549275  0.14697380  7.08009385 
+# sort(shp_plot0527$fit0527_bias, decreasing = TRUE)
+#   [1] 7.08009385 1.78895720
+
+ma_q<-c(min(shp_plot2208$fit2208_bias,na.rm = T)-1,-0.104,-0.062, -0.020, 0.021,0.063,0.105,max(shp_plot2208$fit2208_bias,na.rm = T)+1)
+
+
+shp_plot2208$exp_factor<-cut(shp_plot2208$fit2208_bias,breaks=ma_q,
+                              labels=c('<-0.104','[-0.104, -0.062)','[ -0.062,-0.020)','[-0.020,0.021)','[0.021,0.063)',
+                                      '[0.063,0.105)','0.105+'),right=F)
+
+## race-stratified expected counts, MA ##
+ma_maps2208<-ggplot(shp_plot2208, aes(fill = exp_factor)) +
+  geom_sf(colour=NA) +
+  scale_fill_brewer(palette = "BrBG", na.value = "black")+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        legend.title=element_blank(),text=element_text(size=18))+
+  facet_wrap(~ race)
+#ma_maps2208
+## read in boston shapefiles ##
+bos_shp<-st_read('boston_ct/Census_2010_Tracts.shp')
+bos_shp<-merge(bos_shp,adat_wide,by.x='GEOID10',by.y='GEOID',all.x=T)
+
+bos_bbox<-as.numeric(st_bbox(bos_shp))
+
+xlim<-c(bos_bbox[1], bos_bbox[1]+.4*(bos_bbox[3]-bos_bbox[1]))
+ylim<-c(bos_bbox[2], bos_bbox[2]+.8*(bos_bbox[4]-bos_bbox[2]))
+
+# remove CTs with zero population (these are the islands off the MA coast) ##
+bos_shp<-bos_shp[!bos_shp$NAME10 %in% coast,]
+
+## long form by race ##
+shp_plot2208<-gather(bos_shp,'race','fit2208_bias',
+                 c(bias_ij_dp2208_w,bias_ij_dp2208_b),factor_key = T)
+
+shp_plot2208$race<-mapvalues(shp_plot2208$race,
+                         from=c('bias_ij_dp2208_w','bias_ij_dp2208_b'),
+                         to=c('NHW','Black'))
+# quantile(shp_plot0527$fit0527_bias, na.rm=TRUE)
+# -0.88785804 -0.10397695  0.03460298  0.20137904  7.08009385
+
+shp_plot2208$exp_factor<-cut(shp_plot2208$fit2208_bias,breaks=ma_q,
+                             labels=c('<-0.104','[-0.104, -0.062)','[ -0.062,-0.020)','[-0.020,0.021)','[0.021,0.063)',
+                                      '[0.063,0.105)','0.105+'),right=F)
+
+## race-stratified expected counts, BOS ##  
+bos_maps2208<-ggplot(shp_plot2208, aes(fill = exp_factor)) +
+  geom_sf(colour=NA) +
+  coord_sf(xlim=xlim,ylim=ylim)+
+  scale_fill_brewer(palette = "BrBG", na.value = "black")+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        legend.title=element_blank(),text=element_text(size=18))+
+  facet_wrap(~ race)
+
+m2208<-cowplot::plot_grid(ma_maps2208,bos_maps2208,ncol=1)
+
+print(m2208)
+
+
+```
+
+
+
+

@@ -1,6 +1,6 @@
-## pseudo-simulations using Vintage 2020-05-27 differential privacy data ##
-## Generate data with "true" census pop and use 0527 dp data in models ##
-## date: 01/20/22 ##
+## pseudo-simulations using differential privacy data ##
+## Generate data with "true" census pop and use dp data in models ##
+## date: 02/11/23 ##
 
 
 ## load libraries 
@@ -21,6 +21,7 @@ library(MASS)
 library(msm)
 library(CARBayes)
 library(epitools)
+library(sf)
 
 ###########################################
 ## 1. expected counts and covariate info ##
@@ -35,8 +36,8 @@ setwd(dirname(current_path))
 ## load the pre-prepped MA CT-level ACS/census/dp data ##
 
 #load('merged_denom_cov_w0527.RData')
-load('merged_denom_cov_data4.RData')
-# dim(adat) 209876 * 15
+load('ga_merged_denom_cov_data4.RData')
+# dim(adat) 303226 * 15
 
 # aggregate across the sex variable
 agg_sex <- aggregate(ce_pop~GEOID+race+agecat,data=adat, 
@@ -172,9 +173,25 @@ Nct<-length(unique(adat$GEOID))
 ## 2. adjacency matrix for census tracts ##
 ###########################################
 
-W <- read.csv("W.csv")
-rownames(W) <- W[,1]
-W <- W[,-1]
+## extract shapefile ##
+ga_shp<-tracts(state = 'GA',year=2010)
+
+## get adjacency matrix ##
+
+#foo = poly2nb(ga_shp, queen=TRUE, row.names=ga_shp@data$GEOID10)
+row_names = ga_shp$GEOID10
+foo = poly2nb(ga_shp, queen=TRUE, row.names=row_names)
+
+W=nb2mat(foo,style='B')
+rownames(W) = row_names
+
+
+# ###########################################
+# ## 2. adjacency matrix for census tracts ##
+# ###########################################
+# W <- read.csv("W.csv")
+# rownames(W) <- W[,1]
+# W <- W[,-1]
 
 ## extract shapefile ##
 #sf_roads <- readShapePoly("/Users/liyanran/Desktop/Research/Rachel/census_diff_privacy-master/sims/tl_2010_25_tract10/tl_2010_25_tract10.shp")

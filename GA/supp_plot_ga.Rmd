@@ -22,6 +22,7 @@ library(sf)
 library(tidyr)
 library(purrr)
 library(plyr)
+library(epitools)
 current_path <- getActiveDocumentContext()$path
 setwd(dirname(current_path ))
 
@@ -198,11 +199,11 @@ colnames(P_dp0825) <- c("DP2208")
 w <- adat[adat$race=="white",]
 b <- adat[adat$race=="black",]
 
-percent_5_source <- cbind(mean(w$exp_counts_ce==0), mean(w$exp_counts_dp==0),mean(w$exp_counts_dp0527==0), mean(w$exp_counts_dp22==0), mean(w$exp_counts_dp0825==0), mean(b$exp_counts_ce==0), mean(b$exp_counts_dp==0),mean(b$exp_counts_dp0527==0),mean(b$exp_counts_dp22==0),mean(b$exp_counts_dp0825==0))%>% rbind(cbind(mean(w$exp_counts_ce<5), mean(w$exp_counts_dp<5),mean(w$exp_counts_dp0527<5),mean(w$exp_counts_dp22<5),mean(w$exp_counts_dp0825<5), mean(b$exp_counts_ce<5), mean(b$exp_counts_dp<5),mean(b$exp_counts_dp0527<5),mean(b$exp_counts_dp22<5),mean(b$exp_counts_dp0825<5)))
+percent_5_source <- cbind(mean(w$exp_counts_ce==0), mean(w$exp_counts_dp==0),mean(w$exp_counts_dp0527==0), mean(w$exp_counts_dp0825==0), mean(b$exp_counts_ce==0), mean(b$exp_counts_dp==0),mean(b$exp_counts_dp0527==0),mean(b$exp_counts_dp0825==0))%>% rbind(cbind(mean(w$exp_counts_ce<5), mean(w$exp_counts_dp<5),mean(w$exp_counts_dp0527<5),mean(w$exp_counts_dp0825<5), mean(b$exp_counts_ce<5), mean(b$exp_counts_dp<5),mean(b$exp_counts_dp0527<5),mean(b$exp_counts_dp0825<5)))
 percent_5_source <- percent_5_source*100
 
 rownames(percent_5_source) <- c("Percent of 0 expected counts", "Percent of <5 expected counts")
-colnames(percent_5_source) <- c("DC", "DP19", "DP20","DP22","DP2208", "DC", "DP19","DP20","DP22", "DP2208")
+colnames(percent_5_source) <- c("DC", "DP19", "DP20","DP22", "DC", "DP19","DP20","DP22")
 xtable(percent_5_source)
 ```
 
@@ -225,7 +226,7 @@ Average difference of expected counts
 
 # mean and standard deviation of the differences in the CT-level DP and DC expected counts for the NHW population are XX for DP19
 
-summary_text <- adat %>% mutate(diff19 = exp_counts_dp-exp_counts_ce) %>% mutate(diff20 = exp_counts_dp0527-exp_counts_ce)%>% mutate(diff22 = exp_counts_dp22-exp_counts_ce) %>% mutate(diff0825 = exp_counts_dp0825-exp_counts_ce)
+summary_text <- adat %>% mutate(diff19 = exp_counts_dp-exp_counts_ce) %>% mutate(diff20 = exp_counts_dp0527-exp_counts_ce)%>% mutate(diff0825 = exp_counts_dp0825-exp_counts_ce)
 
 diff19_w <- summary_text[summary_text$race=="white",]$diff19
 diff19_b <- summary_text[summary_text$race=="black",]$diff19
@@ -233,8 +234,6 @@ diff19_b <- summary_text[summary_text$race=="black",]$diff19
 diff20_w <- summary_text[summary_text$race=="white",]$diff20
 diff20_b <- summary_text[summary_text$race=="black",]$diff20
 
-diff22_w <- summary_text[summary_text$race=="white",]$diff22
-diff22_b <- summary_text[summary_text$race=="black",]$diff22
 
 diff0825_w <- summary_text[summary_text$race=="white",]$diff0825
 diff0825_b <- summary_text[summary_text$race=="black",]$diff0825
@@ -253,8 +252,6 @@ huizong(diff19_w)
 huizong(diff19_b)
 huizong(diff20_w)
 huizong(diff20_b)
-huizong(diff22_w)
-huizong(diff22_b)
 huizong(diff0825_w)
 huizong(diff0825_b)
 
@@ -262,21 +259,14 @@ huizong2(diff19_w)
 huizong2(diff19_b)
 huizong2(diff20_w)
 huizong2(diff20_b)
-huizong2(diff22_w)
-huizong2(diff22_b)
 huizong2(diff0825_w)
 huizong2(diff0825_b)
 
-summary_dp_minus_dc <- rbind(huizong2(diff19_w), huizong2(diff19_b),huizong2(diff20_w), huizong2(diff20_b),huizong2(diff22_w), huizong2(diff22_b),huizong2(diff0825_w), huizong2(diff0825_b))
+summary_dp_minus_dc <- rbind(huizong2(diff19_w), huizong2(diff19_b),huizong2(diff20_w), huizong2(diff20_b),huizong2(diff0825_w), huizong2(diff0825_b))
 
 #rownames(summary_dp_minus_dc) <- c("DP19", "DP20")
 xtable(summary_dp_minus_dc,digits = 4)
 ```
-
-
-
-
-
 
 ### boxplot of comparasion for the SMR estimates using the census denominators with the true SMRs
 

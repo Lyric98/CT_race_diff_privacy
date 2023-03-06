@@ -19,6 +19,7 @@ library(sf)
 library(tigris)
 library(plyr)
 library(tidyr)
+library(RColorBrewer)
 ```
 
 # Figure 1 (new!)
@@ -110,11 +111,11 @@ b0<- ggplot(box0, aes(x=variable,y=value, fill=Data)) + xlab(NULL)+ ylab(NULL)+s
     geom_boxplot()+
   scale_fill_brewer(palette = "Set1")
 box1 <- box_compare[box_compare$variable=="beta1_bias",]
-b1<- ggplot(box1, aes(x=variable,y=value, fill=Data)) + xlab(NULL)+ ylab(NULL)+scale_y_continuous(labels = percent_format())+ggtitle("") +
-    geom_boxplot()
+b1<- ggplot(box1, aes(x=variable,y=value, fill=Data)) + xlab(NULL)+ ylab("MA")+scale_y_continuous(labels = percent_format())+ggtitle("Black vs NHW") +
+    geom_boxplot()+theme_linedraw()+ geom_hline(yintercept = 0, color = "black", linetype = "dashed")+ coord_cartesian(ylim=c(-0.15, 0.15))
 box2 <- box_compare[box_compare$variable=="beta2_bias",]
-b2<- ggplot(box2, aes(x=variable,y=value, fill=Data)) + xlab(NULL) + ylab(NULL)+scale_y_continuous(labels = percent_format())+ggtitle("")+
-    geom_boxplot()
+b2<- ggplot(box2, aes(x=variable,y=value, fill=Data)) + xlab(NULL) + ylab(NULL)+scale_y_continuous(labels = percent_format())+ggtitle("Poverty")+
+    geom_boxplot()+theme_linedraw()+ geom_hline(yintercept = 0, color = "black", linetype = "dashed")+ coord_cartesian(ylim=c(-0.006, 0.006))
 
 
 ############
@@ -141,11 +142,9 @@ ggplot(ga_box_compare, aes(x=variable,y=value, fill=Data)) +
     geom_boxplot()
 par(mfrow=c(1,2))
 ga_box1 <- ga_box_compare[ga_box_compare$variable=="beta1_bias",]
-b3<- ggplot(ga_box1, aes(x=variable,y=value, fill=Data)) + xlab(NULL)+ ylab(NULL)+scale_y_continuous(labels = percent_format())+ggtitle("") +
-    geom_boxplot()
+b3<- ggplot(ga_box1, aes(x=variable,y=value, fill=Data)) + xlab(NULL)+ ylab("GA")+scale_y_continuous(labels = percent_format())+ggtitle("") +geom_boxplot()+theme_linedraw()+ geom_hline(yintercept = 0, color = "black", linetype = "dashed")+ coord_cartesian(ylim=c(-0.15, 0.15))
 ga_box2 <- ga_box_compare[ga_box_compare$variable=="beta2_bias",]
-b4<- ggplot(ga_box2, aes(x=variable,y=value, fill=Data)) + xlab(NULL) + ylab(NULL)+scale_y_continuous(labels = percent_format())+ggtitle("")+
-    geom_boxplot()
+b4<- ggplot(ga_box2, aes(x=variable,y=value, fill=Data)) + xlab(NULL) + ylab(NULL)+scale_y_continuous(labels = percent_format())+ggtitle("")+geom_boxplot()+theme_linedraw()+ geom_hline(yintercept = 0, color = "black", linetype = "dashed")+ coord_cartesian(ylim=c(-0.006, 0.006))
 
 require(cowplot)
 library(grid)
@@ -166,10 +165,11 @@ legend <- cowplot::get_legend(
   )
 
 prow <- plot_grid(
-  b1+ theme(axis.title.x=element_blank(),
+  b1+ theme(plot.title =element_text(size=12,hjust= 0.5),
         axis.text.x=element_blank(),
         axis.ticks.x=element_blank(),
-       # axis.title.y=element_blank(),
+        axis.title.y=element_blank(),
+       #axis.title.y=element_text(size=10),
        # axis.text.y=element_blank(),
        # axis.ticks.y=element_blank(),
       #  plot.margin = unit(c(0,0,0,0), "cm"),
@@ -178,7 +178,7 @@ prow <- plot_grid(
         panel.background = element_rect(fill = "white", colour = NA),
         legend.position = "none")+
   scale_fill_brewer(palette = "Set1"),
-  b2+ theme(axis.title.x=element_blank(),
+  b2+ theme(plot.title =element_text(size=12,hjust =0.5),
         axis.text.x=element_blank(),
         axis.ticks.x=element_blank(),
        # axis.title.y=element_blank(),
@@ -193,7 +193,8 @@ prow <- plot_grid(
     b3+ theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
         axis.ticks.x=element_blank(),
-       # axis.title.y=element_blank(),
+        axis.title.y=element_blank(),
+       #axis.title.y=element_text(size=10),
        # axis.text.y=element_blank(),
        # axis.ticks.y=element_blank(),
       #  plot.margin = unit(c(0,0,0,0), "cm"),
@@ -205,18 +206,14 @@ prow <- plot_grid(
   b4+ theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
         axis.ticks.x=element_blank(),
-       # axis.title.y=element_blank(),
-       # axis.text.y=element_blank(),
-       # axis.ticks.y=element_blank(),
-      #  plot.margin = unit(c(0,0,0,0), "cm"),
         panel.grid.major = element_line(colour = 'transparent'),
         panel.grid.minor = element_line(colour = 'transparent'),
         panel.background = element_rect(fill = "white", colour = NA),
         legend.position = "none")+
   scale_fill_brewer(palette = "Set1"),
  align = 'vh',
-  labels = c("Black vs NHW", "        Poverty"),
-  hjust = -1,
+  #labels = c("Black vs NHW", "        Poverty"),
+  #hjust = -1,
   nrow = 2
 )
 prow
@@ -391,11 +388,12 @@ box_pe <- rbind(box_pe, box_pe_ga)
 box_pe$state <- factor(box_pe$state, levels = c("MA", "GA"))
 
 fig1_percent_scale <- ggplot(box_pe, aes(x=race,y=value, fill=Data)) + xlab(NULL) + ylab(NULL)+ggtitle("")+
- facet_wrap(~state)+ 
+ facet_wrap(~state)+theme_linedraw()+ 
    geom_boxplot(outlier.shape = NA)+ 
 scale_y_continuous(labels = percent_format(), limits = c(-1.03, 1.2))+
-  theme(strip.text = element_text(size = 18),
-    strip.background = element_rect(fill = "white", colour = NA),
+  theme(strip.text = element_blank(),
+        #strip.text = element_text(size = 18),
+    #strip.background = element_rect(fill = "white", colour = NA),
         panel.background = element_rect(fill = "white", colour = NA),
     legend.direction = "horizontal",
             legend.background = element_rect(fill = "white", colour = NA),
@@ -403,9 +401,10 @@ scale_y_continuous(labels = percent_format(), limits = c(-1.03, 1.2))+
             legend.key = element_rect(fill = "white", colour = NA),
             panel.grid.major = element_line(colour = 'transparent'),
         panel.grid.minor = element_line(colour = 'transparent'),
-        legend.box.background = element_rect(fill = "white", colour = NA)
-            )+
-  scale_fill_brewer(palette = "Set1")
+        legend.box.background = element_rect(fill = "white", colour = NA))+
+  #scale_fill_brewer(palette = "Set1")
+  scale_fill_manual(values=brewer.pal(n = 4, name = "Set1")[-1], na.value = "white")+ 
+  geom_hline(yintercept = 0, color = "black", linetype = "dashed")
 fig1_percent_scale
 ```
 
@@ -427,38 +426,87 @@ colnames(P_dp0527) <- c("DP20")
 P_dp22 <- matrix(adat$exp_counts_dp0825)
 colnames(P_dp22) <- c("DP22")
 
-# scatter plot of P matrix (ce vs. dp)
-# P_dp_w_GEOID <- cbind(adat[1:2], P_dp, Ptrue) 
-# P_dp0527_w_GEOID <- cbind(adat[1:2], P_dp0527, Ptrue) 
-# P_dp22_w_GEOID <- cbind(adat[1:2], P_dp22, Ptrue) 
 P2_w_GEOID <- cbind(adat[1:2], P_dp, P_dp0527, P_dp22, Ptrue) 
 
 P_dp_ce <- melt(P2_w_GEOID, id=c("GEOID", "race", "Ptrue"))
 names(P_dp_ce)[3:4] <- c("DC", "Data")
-P_dp_ce_scatter <- ggplot(data = P_dp_ce, mapping = aes(x = DC, y = value, color=Data)) + geom_point(alpha=0.3) + ylab("Expected DP counts") + xlab("Expected DC counts")+
-  scale_fill_brewer(palette = "Set1")
-scatter_exp <- P_dp_ce_scatter + facet_wrap(~race) + geom_abline(colour="red")+
-  theme(strip.text = element_text(
-  family = NULL,
-  face = NULL,
-  colour = NULL,
-  size = 18,
-  hjust = NULL,
-  vjust = NULL),
-    strip.background = element_rect(fill = "white", colour = NA),
+
+P_dp_ce$race<-mapvalues(P_dp_ce$race,
+                         from=c('white','black'),
+                         to=c('NHW','Black'))
+P_dp_ce$race <- factor(P_dp_ce$race, levels = c('NHW','Black'))
+
+P_dp_ce_scatter <- ggplot(data = P_dp_ce, mapping = aes(x = DC, y = value, color=Data)) + geom_point(alpha=1) +
+  coord_cartesian(xlim=c(0, 36),ylim=c(0, 36))+ theme(strip.text.x = element_text(size=12),strip.background = element_rect(fill = "white", colour = NA))+
+  ylab("Expected DP counts") + xlab("Expected DC counts")+
+   scale_colour_manual(values=brewer.pal(n = 4, name = "Set1")[-1], na.value = "white")
+scatter_exp <- P_dp_ce_scatter +theme_linedraw()+ geom_abline(colour="black", linetype ="dashed")+
+  theme(axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        #strip.text = element_text(family = NULL,face = NULL,colour = NULL,size = 12,hjust = NULL,vjust = NULL),
+        strip.text.x.top= element_text(size=12),
+        #strip.text.x = element_text(size=12),
+        strip.background = element_rect(fill = "white", colour = NA),
         panel.background = element_rect(fill = "white", colour = NA),
-    legend.direction = "horizontal",
+        legend.direction = "horizontal",
+        legend.background = element_rect(fill = "white", colour = NA),
+        legend.position = "bottom", 
+        legend.key = element_rect(fill = "white", colour = NA),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        legend.box.background = element_rect(fill = "white", colour = NA)) + facet_wrap(~race) 
+
+#############
+## GA #######
+#############
+
+Ptrue_ga <- matrix(adat_ga$exp_counts_ce)
+P_dp_ga <- matrix(adat_ga$exp_counts_dp)
+colnames(P_dp_ga) <- "DP19"
+P_dp0527_ga <- matrix(adat_ga$exp_counts_dp0527)
+colnames(P_dp0527_ga) <- c("DP20")
+P_dp22_ga <- matrix(adat_ga$exp_counts_dp0825)
+colnames(P_dp22_ga) <- c("DP22")
+
+P2_w_GEOID_ga <- cbind(adat_ga[1:2], P_dp_ga, P_dp0527_ga, P_dp22_ga, Ptrue_ga) 
+
+P_dp_ce_ga <- melt(P2_w_GEOID_ga, id=c("GEOID", "race", "Ptrue_ga"))
+names(P_dp_ce_ga)[3:4] <- c("DC", "Data")
+
+P_dp_ce_ga$race<-mapvalues(P_dp_ce_ga$race,
+                         from=c('white','black'),
+                         to=c('NHW','Black'))
+P_dp_ce_ga$race <- factor(P_dp_ce_ga$race, levels = c('NHW','Black'))
+
+P_dp_ce_scatter_ga <- ggplot(data = P_dp_ce_ga, mapping = aes(x = DC, y = value, color=Data)) + geom_point(alpha=1) + 
+  coord_cartesian(xlim=c(0, 36),ylim=c(0, 36))+
+   scale_colour_manual(values=brewer.pal(n = 4, name = "Set1")[-1], na.value = "white")
+scatter_exp_ga <- P_dp_ce_scatter_ga +theme_linedraw()+ facet_wrap(~race) + geom_abline(colour="black", linetype ="dashed")+
+  theme(axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        strip.text = element_text(family = NULL,face = NULL,colour = NULL,size = 12,hjust = NULL,vjust = NULL),
+        strip.background = element_rect(fill = "white", colour = NA),
+        panel.background = element_rect(fill = "white", colour = NA),
+        legend.direction = "horizontal",
+        legend.background = element_rect(fill = "white", colour = NA),
+        legend.position = "none", 
+        legend.key = element_rect(fill = "white", colour = NA),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent')) 
+
+legend <- cowplot::get_legend(
+  # create some space to the left of the legend
+  scatter_exp+ theme(legend.direction = "horizontal",
             legend.background = element_rect(fill = "white", colour = NA),
             legend.position = "bottom", 
             legend.key = element_rect(fill = "white", colour = NA),
             panel.grid.major = element_line(colour = 'transparent'),
         panel.grid.minor = element_line(colour = 'transparent'),
-        legend.box.background = element_rect(fill = "white", colour = NA)
-            )
+        legend.box.background = element_rect(fill = "white", colour = NA)))
 
-#pdf('scatter_exp.pdf',width=7,height=6)
-# P_dp_ce_scatter2 <- ggplot(data = P_dp_ce, mapping = aes(x = Ptrue, y = value, color=race)) + geom_point(alpha=0.3) + ylab("P_dp")+scale_color_brewer(palette="Dark2")
-# P_dp_ce_scatter2 + facet_wrap(~variable) + geom_abline(colour="grey")
+scatter2 <- plot_grid(scatter_exp+theme(legend.position = "none"),
+                      scatter_exp_ga,legend, nrow=3, rel_heights = c(10,10,1))
+
 
 ```
 
@@ -526,23 +574,6 @@ huizong(diff22_b)
 # percent error = (expectedDP - expectedDC)/expectedDC * 100%
 summary_text <- adat %>% mutate(DP19 = (exp_counts_dp-exp_counts_ce)/exp_counts_ce) %>% mutate(DP20 = (exp_counts_dp0527-exp_counts_ce)/exp_counts_ce) %>%  mutate(DP22 = (exp_counts_dp0825-exp_counts_ce)/exp_counts_ce)
 
-# box_pe <- melt(summary_text[,c("race", "DP19", "DP20","DP22")])
-# 
-# box_pe$race<-mapvalues(box_pe$race,
-#                          from=c('white','black'),
-#                          to=c('NHW','Black'))
-# 
-# colnames(box_pe) <- c("race", "Data", "value")
-# 
-# fig1 <- ggplot(box_pe, aes(x=race,y=value, fill=Data)) + xlab(NULL) + ylab(NULL)+ggtitle("")+ geom_boxplot(outlier.shape = NA)+ coord_cartesian(ylim=c(-1.2, 1.8))+ ylab(NULL) 
-# 
-# fig1_percent_scale <- ggplot(box_pe, aes(x=race,y=value, fill=Data)) + xlab(NULL) + ylab(NULL)+ggtitle("")+
-# #    geom_boxplot()+ 
-#    geom_boxplot(outlier.shape = NA)+ 
-#   #coord_cartesian(ylim=c(-1.2, 1.8))+ ylab(NULL) +
-# scale_y_continuous(labels = percent_format(), limits = c(-1.03, 1.2))
-# fig1_percent_scale
-
 pe19_w <- summary_text[summary_text$race=="white",]$DP19
 pe19_b <- summary_text[summary_text$race=="black",]$DP19
 
@@ -589,7 +620,7 @@ xtable(summary_pe_under_ga,digits = 4)
 
 
 
-### boxplot of comparasion for the SMR estimates using the census denominators with the true SMRs
+## boxplot of comparasion for the SMR estimates using the census denominators with the true SMRs
 
 ```{r sim_from_cluster2}
 load("../results_manu/fitted_value3.RData")
@@ -653,6 +684,7 @@ melt_mape$race<-mapvalues(melt_mape$race,
 smr_mape_bw_woo <- ggplot(melt_mape, aes(x=race,y=value, fill=Data)) + 
     geom_boxplot(outlier.shape = NA)+ ylab(NULL)+ xlab(NULL)+
 scale_y_continuous(labels = percent_format(), limits = c(0, 1.2))+ggtitle("")+
+  theme_linedraw()+
   theme(strip.background = element_rect(fill = "white", colour = NA),
         panel.background = element_rect(fill = "white", colour = NA),
     legend.direction = "horizontal",
@@ -661,9 +693,8 @@ scale_y_continuous(labels = percent_format(), limits = c(0, 1.2))+ggtitle("")+
             legend.key = element_rect(fill = "white", colour = NA),
             panel.grid.major = element_line(colour = 'transparent'),
         panel.grid.minor = element_line(colour = 'transparent'),
-        legend.box.background = element_rect(fill = "white", colour = NA)
-            )+
-  scale_fill_brewer(palette = "Set1")
+        legend.box.background = element_rect(fill = "white", colour = NA))+
+  scale_fill_brewer(palette = "Set1")+ geom_hline(yintercept = 0, color = "black", linetype = "dashed")
 
 # old dp
 bias_ij_dp19 = colSums(smrdp19-true_smrs_dp19)/100
@@ -677,14 +708,19 @@ bias_ij_ce = colSums(smrce-true_smrs_ce)/100
 # looking at boxplots of the mean absolute percentage error of the SMRs for each CT/race group (relative to ce)
 smr_bias <- cbind(adat[1:2], bias_ij_ce, bias_ij_dp19, bias_ij_dp20, bias_ij_dp2208) 
 smr_bias_box <- smr_bias[,c("GEOID", "race", "bias_ij_ce","bias_ij_dp19","bias_ij_dp20", "bias_ij_dp2208")]
+names(smr_bias_box) <- c("GEOID", "race", "DC","DP19","DP20", "DP22")
 melt_bias = melt(smr_bias_box)
+
 melt_bias$race<-mapvalues(melt_bias$race,
                          from=c('white','black'),
                          to=c('NHW','Black'))
+names(melt_bias)<-c("GEOID","race","Data","value")
 
 
 smr_bias_bw_woo <- ggplot(melt_bias, aes(x=race,y=value, fill=variable)) + 
-    geom_boxplot(outlier.shape = NA)+ coord_cartesian(ylim=c(-0.5, 0.8))+ xlab(NULL)+ylab(NULL)+
+    geom_boxplot(outlier.shape = NA)+ coord_cartesian(ylim=c(-0.5, 0.8))+ 
+  theme_linedraw()+
+  xlab(NULL)+ylab(NULL)+
   theme(strip.background = element_rect(fill = "white", colour = NA),
         panel.background = element_rect(fill = "white", colour = NA),
     legend.direction = "horizontal",
@@ -693,9 +729,8 @@ smr_bias_bw_woo <- ggplot(melt_bias, aes(x=race,y=value, fill=variable)) +
             legend.key = element_rect(fill = "white", colour = NA),
             panel.grid.major = element_line(colour = 'transparent'),
         panel.grid.minor = element_line(colour = 'transparent'),
-        legend.box.background = element_rect(fill = "white", colour = NA)
-            )+
-  scale_fill_brewer(palette = "Set1")
+        legend.box.background = element_rect(fill = "white", colour = NA))+
+  scale_fill_brewer(palette = "Set1")+ geom_hline(yintercept = 0, color = "black", linetype = "dashed")
 
 require(cowplot)
 library(grid)
@@ -711,18 +746,16 @@ legend <- cowplot::get_legend(
         panel.grid.minor = element_line(colour = 'transparent'),
         legend.box.background = element_rect(fill = "white", colour = NA)))
 
-prow <- plot_grid(
-  smr_bias_bw_woo+ theme(legend.position="none"),
-  smr_mape_bw_woo+ theme(legend.position="none"),
-  align = 'vh',
-  labels = c("Bias", "MAPE"),
-  label_x = 0.5,
-  #hjust = -1,
-  nrow = 1
-)
+# prow <- plot_grid(
+#   smr_bias_bw_woo+ theme(legend.position="none"),
+#   smr_mape_bw_woo+ theme(legend.position="none"),
+#   align = 'vh',
+#   labels = c("Bias", "MAPE"),
+#   label_x = 0.5,
+#   #hjust = -1,
+#   nrow = 1
+# )
 
-smr_mape_bias <-plot_grid(prow,legend, ncol=1, rel_heights = c(10,1))
-smr_mape_bias
 
 ```
 
@@ -779,21 +812,43 @@ ga_melt_mape$race<-mapvalues(ga_melt_mape$race,
                          from=c('white','black'),
                          to=c('NHW','Black'))
 
-
-ga_smr_mape_bw_woo <- ggplot(ga_melt_mape, aes(x=race,y=value, fill=Data)) + 
+melt_mape$state <- "MA"
+ga_melt_mape$state <- "GA"
+melt_mape_2state <- melt(rbind(melt_mape, ga_melt_mape))
+melt_mape_2state$state <- factor(melt_mape_2state$state, levels = c("MA", "GA"))
+smr_mape_bw_2 <- ggplot(melt_mape_2state, aes(x=race,y=value, fill=Data)) +
     geom_boxplot(outlier.shape = NA)+ ylab(NULL)+ xlab(NULL)+
+  theme_linedraw()+
 scale_y_continuous(labels = percent_format(), limits = c(0, 1.2))+ggtitle("")+
   theme(strip.background = element_rect(fill = "white", colour = NA),
         panel.background = element_rect(fill = "white", colour = NA),
     legend.direction = "horizontal",
             legend.background = element_rect(fill = "white", colour = NA),
-            legend.position = "bottom", 
+            legend.position = "bottom",
             legend.key = element_rect(fill = "white", colour = NA),
             panel.grid.major = element_line(colour = 'transparent'),
         panel.grid.minor = element_line(colour = 'transparent'),
-        legend.box.background = element_rect(fill = "white", colour = NA)
-            )+
-  scale_fill_brewer(palette = "Set1")
+        legend.box.background = element_rect(fill = "white", colour = NA))+
+  scale_fill_brewer(palette = "Set1")+ geom_hline(yintercept = 0, color = "black", linetype = "dashed")+facet_wrap(~state)
+
+
+
+# ga_smr_mape_bw_woo <- ggplot(ga_melt_mape, aes(x=race,y=value, fill=Data)) + 
+#     geom_boxplot(outlier.shape = NA)+ ylab(NULL)+ xlab(NULL)+
+#   theme_linedraw()+
+# scale_y_continuous(labels = percent_format(), limits = c(0, 1.2))+ggtitle("")+
+#   theme(strip.background = element_rect(fill = "white", colour = NA),
+#         panel.background = element_rect(fill = "white", colour = NA),
+#     legend.direction = "horizontal",
+#     axis.title.y=element_blank(),
+#     axis.ticks.y=element_blank(),axis.text.y=element_blank(),
+#             legend.background = element_rect(fill = "white", colour = NA),
+#             legend.position = "bottom", 
+#             legend.key = element_rect(fill = "white", colour = NA),
+#             panel.grid.major = element_line(colour = 'transparent'),
+#         panel.grid.minor = element_line(colour = 'transparent'),
+#         legend.box.background = element_rect(fill = "white", colour = NA))+
+#   scale_fill_brewer(palette = "Set1")+ geom_hline(yintercept = 0, color = "black", linetype = "dashed")
 
 
 # old dp
@@ -808,15 +863,19 @@ ga_bias_ij_ce = colSums(smrce-ga_true_smrs_ce)/100
 # looking at boxplots of the mean absolute percentage error of the SMRs for each CT/race group (relative to ce)
 ga_smr_bias <- cbind(adat_ga[1:2], ga_bias_ij_ce, ga_bias_ij_dp19, ga_bias_ij_dp20, ga_bias_ij_dp2208) 
 ga_smr_bias_box <- ga_smr_bias[,c("GEOID", "race", "ga_bias_ij_ce","ga_bias_ij_dp19","ga_bias_ij_dp20", "ga_bias_ij_dp2208")]
+names(ga_smr_bias_box) <- c("GEOID", "race", "DC","DP19","DP20", "DP22")
+
 
 ga_melt_bias = melt(ga_smr_bias_box)
 ga_melt_bias$race<-mapvalues(ga_melt_bias$race,
                          from=c('white','black'),
                          to=c('NHW','Black'))
+names(ga_melt_bias)<-c("GEOID","race","Data","value")
 
 
 ga_smr_bias_bw_woo <- ggplot(ga_melt_bias, aes(x=race,y=value, fill=variable)) + 
     geom_boxplot(outlier.shape = NA)+ coord_cartesian(ylim=c(-0.5, 0.8))+ xlab(NULL)+ylab(NULL)+
+  theme_linedraw()+
   theme(strip.background = element_rect(fill = "white", colour = NA),
         panel.background = element_rect(fill = "white", colour = NA),
     legend.direction = "horizontal",
@@ -826,19 +885,46 @@ ga_smr_bias_bw_woo <- ggplot(ga_melt_bias, aes(x=race,y=value, fill=variable)) +
             panel.grid.major = element_line(colour = 'transparent'),
         panel.grid.minor = element_line(colour = 'transparent'),
         legend.box.background = element_rect(fill = "white", colour = NA))+
-  scale_fill_brewer(palette = "Set1")
+  scale_fill_brewer(palette = "Set1")+ geom_hline(yintercept = 0, color = "black", linetype = "dashed")
 
 
-prow_ga <- plot_grid(
-  ga_smr_bias_bw_woo+ theme(legend.position="none"),
-  ga_smr_mape_bw_woo+ theme(legend.position="none"),
-  align = 'vh',
-  #labels = c("Bias", "MAPE"),
-  hjust = -1,
-  nrow = 1)
 
-smr_mape_bias <-cowplot::plot_grid(prow,prow_ga, legend, ncol=1, rel_heights = c(10,10,1))
-smr_mape_bias
+melt_bias$state <- "MA"
+ga_melt_bias$state <- "GA"
+melt_bias_2state <- melt(rbind(melt_bias, ga_melt_bias))
+melt_bias_2state$state <- factor(melt_bias_2state$state, levels = c("MA", "GA"))
+smr_bias_bw_2 <- ggplot(melt_bias_2state, aes(x=race,y=value, fill=Data)) + 
+    geom_boxplot(outlier.shape = NA)+ coord_cartesian(ylim=c(-0.5, 0.8))+ xlab(NULL)+ylab(NULL)+
+  theme_linedraw()+
+  theme(
+    strip.background = element_rect(fill = "white", colour = NA),
+        panel.background = element_rect(fill = "white", colour = NA),
+    legend.direction = "horizontal",
+            legend.background = element_rect(fill = "white", colour = NA),
+            legend.position = "bottom", 
+            legend.key = element_rect(fill = "white", colour = NA),
+            panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        legend.box.background = element_rect(fill = "white", colour = NA))+
+  scale_fill_brewer(palette = "Set1")+ geom_hline(yintercept = 0, color = "black", linetype = "dashed")+facet_wrap(~state)
+
+
+
+
+
+# prow_ga <- plot_grid(
+#   ga_smr_bias_bw_woo+ theme(legend.position="none"),
+#   ga_smr_mape_bw_woo+ theme(legend.position="none"),
+#   align = 'vh',
+#   #labels = c("Bias", "MAPE"),
+#   hjust = -1,
+#   nrow = 1)
+aligned_plots <- align_plots( smr_bias_bw_2+ theme(panel.spacing.y = unit(0, "cm"),legend.position="none"),
+                               smr_mape_bw_2+ theme(panel.spacing.y = unit(0, "cm"),legend.position="none"), align = "v", axis = "y")
+
+smr_mape_bias_t <-plot_grid(aligned_plots[[1]], aligned_plots[[2]], legend, ncol = 1, rel_heights = c(10,10,1))
+# smr_mape_bias <-cowplot::plot_grid(prow,prow_ga, legend, ncol=1, rel_heights = c(10,10,1))
+# smr_mape_bias
 ```
 
 
@@ -1055,11 +1141,6 @@ m0527<-cowplot::plot_grid(ma_maps0527+ theme(legend.position="none"),
                           ncol=1, 
                            rel_heights = c(2,2,.1))
 
-## save to pdf ##
-pdf('maps_mape0527.pdf',width=7,height=6)
-print(m0527)
-
-
 ```
 
 ## maps of MAPE for 2020-05-27 version 
@@ -1067,13 +1148,13 @@ print(m0527)
 
 ```{r GA MAPE0527 plot}
 
-# load("../GA/sim/bw_adat5.RData")
-# adat_ga
-# adat_ga <- cbind(adat_ga, ga_mape_ij_dp20)[,c(1, 2, 8)] #2877*4
+load("../GA/sim/bw_adat5.RData")
+adat_ga <- adat
+adat_ga <- cbind(adat_ga, ga_mape_ij_dp20)[,c(1, 2, 8)] #2877*4
 # 
 # 
 # ## put in wide format to merge with the shapefile ##
-# adat_wide_ga<-merge(adat_ga[which(adat_ga$race=='white'),],adat_ga[which(adat_ga$race=='black'),],by='GEOID',suffixes=c('_w','_b'))
+adat_wide_ga<-merge(adat_ga[which(adat_ga$race=='white'),],adat_ga[which(adat_ga$race=='black'),],by='GEOID',suffixes=c('_w','_b'))
 #  1418*7
 ## extract CT shapefile ##
 ga_shp<-tracts(state = 'GA',year=2010)
@@ -1302,8 +1383,6 @@ ma_maps0527<-ggplot(shp_plot0527, aes(fill = exp_factor)) +
 ma_maps0527
 
 
-
-
 legend <- cowplot::get_legend(
   # create some space to the left of the legend
   ma_maps0527+ guides(fill = guide_legend(nrow = 1)) + 
@@ -1526,4 +1605,528 @@ b0527<-cowplot::plot_grid(ma_maps0527+ theme(legend.position="none"),
 
 
 ```
+
+
+## maps of MAPE for 2022-08-25 version 
+### MA+GA
+
+```{r MAPE0825 plot}
+#### MAPE2208 plot
+load('../bw_adat.RData')
+adat <- cbind(adat, mape_ij_dp2208)[,c(1, 2, 8)] #2877*4
+
+
+## put in wide format to merge with the shapefile ##
+adat_wide<-merge(adat[which(adat$race=='white'),],adat[which(adat$race=='black'),],by='GEOID',suffixes=c('_w','_b'))
+#  1418*7
+
+## extract CT shapefile ##
+ma_shp<-tracts(state = 'MA',year=2010)
+
+## merge with pop and rate data ##
+ma_shp<-merge(ma_shp,adat_wide,by.x='GEOID10',by.y='GEOID',all.x=T)
+
+## put in sf format to use nice mapping packages ##
+ma_shp<-st_as_sf(ma_shp)  #1478*21
+
+
+shp_plot2208<-gather(ma_shp,'race','fit2208_mape',
+                 c(mape_ij_dp2208_w,mape_ij_dp2208_b),factor_key = T)
+
+shp_plot2208$race<-mapvalues(shp_plot2208$race,
+                         from=c('mape_ij_dp2208_w','mape_ij_dp2208_b'),
+                         to=c('NHW','Black'))
+
+ma_q<-c(0,0.21,0.466, 0.722, 0.978,1.234,1.49,max(shp_plot2208$fit2208_mape,na.rm = T)+1)
+
+
+shp_plot2208$exp_factor<-cut(shp_plot2208$fit2208_mape,breaks=ma_q,
+                             labels=c('<0.210','[0.210,0.466)','[0.466,0.722)','[0.722,0.978)','[0.978,1.234)',
+                                      '[1.234,1.490)','1.490+'),right=F)
+
+## race-stratified expected counts, MA ##
+ma_maps2208<-ggplot(shp_plot2208, aes(fill = exp_factor)) +
+  geom_sf(colour=NA) +
+  scale_fill_brewer(palette = "YlOrRd", na.value = "white", na.translate = F)+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.ticks.y=element_blank(),
+        axis.title.y=element_blank(),
+        legend.title=element_blank(),
+        text=element_text(size=18),
+        strip.text.x = element_text(size=18, face="bold"),
+        strip.background = element_rect(fill = "white", colour = NA),
+        panel.background = element_rect(fill = "white", colour = NA),
+        legend.direction = "horizontal",
+        legend.background = element_rect(fill = "white", colour = NA),
+        legend.position = "bottom", 
+        legend.key = element_rect(fill = "white", colour = NA),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        legend.box.background = element_rect(fill = "white", colour = NA))+
+   facet_wrap(~ race)
+ma_maps2208
+
+legend <- cowplot::get_legend(
+  # create some space to the left of the legend
+  ma_maps2208+ guides(fill = guide_legend(nrow = 1)) + 
+         #  scale_fill_discrete(na.translate = F)+
+    theme(legend.direction = "horizontal",
+          legend.key.size = unit(.5, 'cm'),
+          legend.text = element_text(size=10),
+          legend.background = element_rect(fill = "white", colour = NA),
+          legend.position = "bottom", 
+          legend.key = element_rect(fill = "white", colour = NA),
+          panel.grid.major = element_line(colour = 'transparent'),
+          panel.grid.minor = element_line(colour = 'transparent'),
+          legend.box.background = element_rect(fill = "white", colour = NA)))
+
+
+## read in boston shapefiles ##
+bos_shp<-st_read('../boston_ct/Census_2010_Tracts.shp')
+bos_shp<-merge(bos_shp,adat_wide,by.x='GEOID10',by.y='GEOID',all.x=T)
+
+bos_bbox<-as.numeric(st_bbox(bos_shp))
+
+xlim<-c(bos_bbox[1], bos_bbox[1]+.4*(bos_bbox[3]-bos_bbox[1]))
+ylim<-c(bos_bbox[2], bos_bbox[2]+.8*(bos_bbox[4]-bos_bbox[2]))
+
+## remove CTs with zero population (these are the islands off the MA coast) ##
+#bos_shp<-bos_shp[which(bos_shp$exp_counts_ce_w!="NA" | bos_shp$exp_counts_ce_b!="NA"),]
+
+## long form by race ##
+shp_plot2208<-gather(bos_shp,'race','fit2208_mape',
+                 c(mape_ij_dp2208_w,mape_ij_dp2208_b),factor_key = T)
+
+shp_plot2208$race<-mapvalues(shp_plot2208$race,
+                         from=c('mape_ij_dp2208_w','mape_ij_dp2208_b'),
+                         to=c('NHW','Black'))
+
+shp_plot2208$exp_factor<-cut(shp_plot2208$fit2208_mape,breaks=ma_q,
+   labels=c('<0.210','[0.210,0.466)','[0.466,0.722)','[0.722,0.978)','[0.978,1.234)','[1.234,1.490)','1.490+'),right=F,levels=levels)
+
+## race-stratified expected counts, BOS ##  
+bos_maps2208<-ggplot(shp_plot2208, aes(fill = exp_factor)) +
+  geom_sf(colour=NA) +
+  coord_sf(xlim=xlim,ylim=ylim)+
+  #scale_fill_brewer(palette = "YlOrRd", na.value = "white")+
+  scale_fill_manual(values=brewer.pal(n = 7, name = "YlOrRd")[-1], na.value = "white")+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.ticks.y=element_blank(),
+        axis.title.y=element_blank(),
+        legend.title=element_blank(),
+        text=element_text(size=18),
+        strip.text.x = element_blank(),
+        strip.background = element_rect(fill = "white", colour = NA),
+        panel.background = element_rect(fill = "white", colour = NA),
+        legend.direction = "horizontal",
+        legend.background = element_rect(fill = "white", colour = NA),
+        legend.position = "bottom", 
+        legend.key = element_rect(fill = "white", colour = NA),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        legend.box.background = element_rect(fill = "white", colour = NA)) +
+  facet_wrap(~ race)
+
+m2208<-cowplot::plot_grid(ma_maps2208+ theme(legend.position="none"),
+                          bos_maps2208+ theme(legend.position="none"),
+                          legend,ncol=1, rel_heights = c(2,2,.1))
+
+load("../GA/sim/bw_adat5.RData")
+adat_ga <- adat
+adat_ga <- cbind(adat_ga, ga_mape_ij_dp2208)[,c(1, 2, 8)] #2877*4
+# 
+# ## put in wide format to merge with the shapefile ##
+adat_wide_ga<-merge(adat_ga[which(adat_ga$race=='white'),],adat_ga[which(adat_ga$race=='black'),],by='GEOID',suffixes=c('_w','_b'))
+## extract CT shapefile ##
+ga_shp<-tracts(state = 'GA',year=2010)
+
+## merge with pop and rate data ##
+ga_shp<-merge(ga_shp,adat_wide_ga,by.x='GEOID10',by.y='GEOID',all.x=T)
+
+## put in sf format to use nice mapping packages ##
+ga_shp<-st_as_sf(ga_shp)  # 1969 *19
+
+
+shp_plot2208<-gather(ga_shp,'race','fit2208_mape',
+                 c(ga_mape_ij_dp2208_w,ga_mape_ij_dp2208_b),factor_key = T)
+
+shp_plot2208$race<-mapvalues(shp_plot2208$race,
+                         from=c('ga_mape_ij_dp2208_w','ga_mape_ij_dp2208_b'),
+                         to=c('NHW','Black'))
+
+ga_q = ma_q
+shp_plot2208$exp_factor<-cut(shp_plot2208$fit2208_mape,breaks=ga_q,
+                             labels=c('<0.210','[0.210,0.466)','[0.466,0.722)','[0.722,0.978)','[0.978,1.234)',
+                                      '[1.234,1.490)','1.490+'),right=F)
+
+## race-stratified expected counts, MA ##
+ga_maps2208<-ggplot(shp_plot2208, aes(fill = exp_factor)) +
+  geom_sf(colour=NA) +
+  scale_fill_brewer(palette = "YlOrRd", na.value = "white", na.translate = F)+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.ticks.y=element_blank(),
+        axis.title.y=element_blank(),
+        legend.title=element_blank(),
+        text=element_text(size=18),
+        strip.text.x = element_blank(),
+        strip.background = element_rect(fill = "white", colour = NA),
+        panel.background = element_rect(fill = "white", colour = NA),
+        legend.direction = "horizontal",
+        legend.background = element_rect(fill = "white", colour = NA),
+        legend.position = "bottom", 
+        legend.key = element_rect(fill = "white", colour = NA),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        legend.box.background = element_rect(fill = "white", colour = NA))+
+  facet_wrap(~ race)
+
+## read in boston shapefiles ##
+fulton_shp<-tracts(state = 'GA', county =c("Fulton","Dekalb") , year=2010)
+
+## merge with pop and rate data ##
+fulton_shp<-merge(fulton_shp,adat_wide_ga,by.x='GEOID10',by.y='GEOID',all.x=T)
+
+## put in sf format to use nice mapping packages ##
+fulton_shp<-st_as_sf(fulton_shp)  #1478*21
+
+
+## manually extract the NAME10 in Atlanta City ##
+dekalb_name <- read.table("./shp_files/atl_ct/DC10CT_C13089_CT2MS.txt", header = TRUE,sep = ";")
+#dekalb_name <- dekalb_name[c(1:11, 111:112,203),] 2020 DC map
+dekalb_name <- dekalb_name[c(1:10),]
+
+fulton_name <- read.table("./shp_files/atl_ct/DC10CT_C13121_CT2MS.txt", header = TRUE,sep = ";")
+#fulton_name <- fulton_name[c(1:157,321:325),]
+fulton_name <- fulton_name[c(1:114,135, 202,204),]
+
+atl_name <- rbind(dekalb_name, fulton_name)
+
+## remove CTs with zero population (these are the islands off the MA coast) ##
+atl_shp<-fulton_shp[fulton_shp$GEOID10 %in% atl_name$CODE,]
+
+atl_bbox<-as.numeric(st_bbox(atl_shp))
+
+xlim<-c(atl_bbox[1], atl_bbox[3])
+ylim<-c(atl_bbox[2], atl_bbox[4])
+
+## long form by race ##
+shp_plot2208 <- gather(atl_shp,'race','ga_fit2208_mape',
+                 c(ga_mape_ij_dp2208_w,ga_mape_ij_dp2208_b),factor_key = T)
+
+shp_plot2208$race<-mapvalues(shp_plot2208$race,
+                         from=c('ga_mape_ij_dp2208_w','ga_mape_ij_dp2208_b'),
+                         to=c('NHW','Black'))
+
+shp_plot2208$exp_factor<-cut(shp_plot2208$ga_fit2208_mape,breaks=ma_q,
+   labels=c('<0.210','[0.210,0.466)','[0.466,0.722)','[0.722,0.978)','[0.978,1.234)',
+                                      '[1.234,1.490)','1.490+'),right=F,levels=levels)
+
+## race-stratified expected counts, BOS ##  
+atl_maps2208<-ggplot(shp_plot2208, aes(fill = exp_factor)) +
+  geom_sf(colour=NA) +
+  coord_sf(xlim=xlim,ylim=ylim)+
+  scale_fill_manual(values=brewer.pal(n = 7, name = "YlOrRd")[-1], na.value = "white")+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.ticks.y=element_blank(),
+        axis.title.y=element_blank(),
+        legend.title=element_blank(),
+        text=element_text(size=18),
+        strip.text.x = element_blank(),
+        strip.background = element_rect(fill = "white", colour = NA),
+        panel.background = element_rect(fill = "white", colour = NA),
+        legend.direction = "horizontal",
+        legend.background = element_rect(fill = "white", colour = NA),
+        legend.position = "bottom", 
+        legend.key = element_rect(fill = "white", colour = NA),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        legend.box.background = element_rect(fill = "white", colour = NA)) +
+  facet_wrap(~ race)
+
+m2208<-cowplot::plot_grid(ma_maps2208+ theme(legend.position="none"),
+                          bos_maps2208+ theme(legend.position="none"),
+                          ga_maps2208+ theme(legend.position="none"),
+                          atl_maps2208+ theme(legend.position="none"),
+                          legend,ncol=1, rel_heights = c(3,2.5,3,2.5,.22))
+
+```
+
+### maps of bias for 2022-08-25 version
+
+```{r}
+coast <- c("9900", "9900.03", "9901", "9901.01")
+
+load('../bw_adat5.RData')
+adat <- cbind(adat, bias_ij_dp2208)[,c(1, 2, 9)] #2877*4
+
+
+## put in wide format to merge with the shapefile ##
+adat_wide<-merge(adat[which(adat$race=='white'),],adat[which(adat$race=='black'),],by='GEOID',suffixes=c('_w','_b'))
+#  1418*7
+
+## extract CT shapefile ##
+ma_shp<-tracts(state = 'MA',year=2010)
+
+## merge with pop and rate data ##
+ma_shp<-merge(ma_shp,adat_wide,by.x='GEOID10',by.y='GEOID',all.x=T)
+
+## put in sf format to use nice mapping packages ##
+ma_shp<-st_as_sf(ma_shp)  #1478*21
+
+## remove CTs with zero population (these are the islands off the MA coast) ##
+ma_shp<-ma_shp[!ma_shp$NAME10 %in% coast,]
+
+shp_plot2208<-gather(ma_shp,'race','fit2208_bias',
+                 c(bias_ij_dp2208_w,bias_ij_dp2208_b),factor_key = T)
+
+shp_plot2208$race<-mapvalues(shp_plot2208$race,
+                         from=c('bias_ij_dp2208_w','bias_ij_dp2208_b'),
+                         to=c('NHW','Black'))
+
+ma_q<-c(min(shp_plot2208$fit2208_bias,na.rm = T)-1,-0.104,-0.062, -0.020, 0.021,0.063,0.105,max(shp_plot2208$fit2208_bias,na.rm = T)+1)
+
+
+shp_plot2208$exp_factor<-cut(shp_plot2208$fit2208_bias,breaks=ma_q,
+                              labels=c('<-0.104','[-0.104, -0.062)','[-0.062,-0.020)','[-0.020,0.021)','[0.021,0.063)','[0.063,0.105)','0.105+'),right=F)
+
+## race-stratified expected counts, MA ##
+ma_maps2208<-ggplot(shp_plot2208, aes(fill = exp_factor)) +
+  geom_sf(colour=NA) +
+  scale_fill_brewer(palette = "BrBG", na.value = "white", na.translate = F)+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.ticks.y=element_blank(),
+        axis.title.y=element_blank(),
+        legend.title=element_blank(),
+        text=element_text(size=18),
+        strip.text.x = element_text(size=18, face="bold"),
+        strip.background = element_rect(fill = "white", colour = NA),
+        panel.background = element_rect(fill = "white", colour = NA),
+        legend.direction = "horizontal",
+        legend.background = element_rect(fill = "white", colour = NA),
+        legend.position = "bottom", 
+        legend.key = element_rect(fill = "white", colour = NA),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        legend.box.background = element_rect(fill = "white", colour = NA))+
+  facet_wrap(~ race)
+ma_maps2208
+
+
+legend <- cowplot::get_legend(
+  # create some space to the left of the legend
+  ma_maps2208 + guides(fill = guide_legend(nrow = 1)) + 
+    theme(legend.direction = "horizontal",
+          legend.key.size = unit(.5, 'cm'),
+          legend.text = element_text(size=10),
+          legend.background = element_rect(fill = "white", colour = NA),
+          legend.position = "bottom", 
+          legend.key = element_rect(fill = "white", colour = NA),
+          panel.grid.major = element_line(colour = 'transparent'),
+          panel.grid.minor = element_line(colour = 'transparent'),
+          legend.box.background = element_rect(fill = "white", colour = NA)))
+
+bos_shp<-st_read('../boston_ct/Census_2010_Tracts.shp')
+bos_shp<-merge(bos_shp,adat_wide,by.x='GEOID10',by.y='GEOID',all.x=T)
+
+bos_bbox<-as.numeric(st_bbox(bos_shp))
+
+xlim<-c(bos_bbox[1], bos_bbox[1]+.4*(bos_bbox[3]-bos_bbox[1]))
+ylim<-c(bos_bbox[2], bos_bbox[2]+.8*(bos_bbox[4]-bos_bbox[2]))
+
+# remove CTs with zero population (these are the islands off the MA coast) ##
+bos_shp<-bos_shp[!bos_shp$NAME10 %in% coast,]
+
+## long form by race ##
+shp_plot2208 <- gather(bos_shp,'race','fit2208_bias',
+                 c(bias_ij_dp2208_w,bias_ij_dp2208_b),factor_key = T)
+
+shp_plot2208$race<-mapvalues(shp_plot2208$race,
+                         from=c('bias_ij_dp2208_w','bias_ij_dp2208_b'),
+                         to=c('NHW','Black'))
+
+shp_plot2208$exp_factor<-cut(shp_plot2208$fit2208_bias,breaks=ma_q,
+                             labels=c('<-0.104','[-0.104, -0.062)','[-0.062,-0.020)','[-0.020,0.021)','[0.021,0.063)','[0.063,0.105)','0.105+'),right=F)
+
+## race-stratified expected counts, BOS ##  
+bos_maps2208 <- ggplot(shp_plot2208, aes(fill = exp_factor)) +
+  geom_sf(colour=NA) +
+  coord_sf(xlim=xlim,ylim=ylim)+
+  scale_fill_manual(values=brewer.pal(n = 7, name = "BrBG"), na.value = "white")+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.ticks.y=element_blank(),
+        axis.title.y=element_blank(),
+        legend.title=element_blank(),
+        text=element_text(size=18),
+        strip.text.x = element_blank(),
+        strip.background = element_rect(fill = "white", colour = NA),
+        panel.background = element_rect(fill = "white", colour = NA),
+        legend.direction = "horizontal",
+        legend.background = element_rect(fill = "white", colour = NA),
+        legend.position = "bottom", 
+        legend.key = element_rect(fill = "white", colour = NA),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        legend.box.background = element_rect(fill = "white", colour = NA)) +
+  facet_wrap(~ race)
+
+coast <- c("9900")
+load("../GA/sim/bw_adat5.RData")
+
+adat <- cbind(adat, ga_bias_ij_dp2208)[,c(1, 2, 8)] #2877*4
+
+## put in wide format to merge with the shapefile ##
+adat_wide <- merge(adat[which(adat$race=='white'),],adat[which(adat$race=='black'),],by='GEOID',suffixes=c('_w','_b'))
+
+ga_shp<-tracts(state = 'GA', year=2010)
+
+## merge with pop and rate data ##
+ga_shp<-merge(ga_shp,adat_wide,by.x='GEOID10',by.y='GEOID',all.x=T)
+
+## put in sf format to use nice mapping packages ##
+ga_shp<-st_as_sf(ga_shp)  # 1969 *19
+
+## remove CTs with zero population (these are the islands off the MA coast) ##
+ga_shp <- ga_shp[!ga_shp$NAME10 %in% coast,]
+
+shp_plot2208 <- gather(ga_shp,'race','ga_fit2208_bias',
+                 c(ga_bias_ij_dp2208_w,ga_bias_ij_dp2208_b),factor_key = T)
+
+shp_plot2208$race<-mapvalues(shp_plot2208$race,
+                         from=c('ga_bias_ij_dp2208_w','ga_bias_ij_dp2208_b'),
+                         to=c('NHW','Black'))
+ga_q = ma_q
+shp_plot2208$exp_factor<-cut(shp_plot2208$ga_fit2208_bias,breaks=ga_q,
+                              labels=c('<-0.104','[-0.104, -0.062)','[-0.062,-0.020)','[-0.020,0.021)','[0.021,0.063)','[0.063,0.105)','0.105+'),right=F)
+
+## race-stratified expected counts, MA ##
+ga_maps2208 <- ggplot(shp_plot2208, aes(fill = exp_factor)) +
+  geom_sf(colour=NA) +
+  scale_fill_brewer(palette = "BrBG", na.value = "white", na.translate = F)+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.ticks.y=element_blank(),
+        axis.title.y=element_blank(),
+        legend.title=element_blank(),
+        text=element_text(size=18),
+        strip.text.x = element_blank(),
+        strip.background = element_rect(fill = "white", colour = NA),
+        panel.background = element_rect(fill = "white", colour = NA),
+        legend.direction = "horizontal",
+        legend.background = element_rect(fill = "white", colour = NA),
+        legend.position = "bottom", 
+        legend.key = element_rect(fill = "white", colour = NA),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        legend.box.background = element_rect(fill = "white", colour = NA))+
+  facet_wrap(~ race)
+
+## read in atlanta shapefiles ##
+fulton_shp<-tracts(state = 'GA', county =c("Fulton","Dekalb"), year=2010)
+
+## merge with pop and rate data ##
+fulton_shp<-merge(fulton_shp, adat_wide, by.x='GEOID10',by.y='GEOID',all.x=T)
+
+## put in sf format to use nice mapping packages ##
+fulton_shp<-st_as_sf(fulton_shp)  #1478*21
+
+## manually extract the NAME10 in Atlanta City ##
+dekalb_name <- read.table("./shp_files/atl_ct/DC10CT_C13089_CT2MS.txt", header = TRUE,sep = ";")
+#dekalb_name <- dekalb_name[c(1:11, 111:112,203),] 2020 DC map
+dekalb_name <- dekalb_name[c(1:10),]
+
+fulton_name <- read.table("./shp_files/atl_ct/DC10CT_C13121_CT2MS.txt", header = TRUE,sep = ";")
+#fulton_name <- fulton_name[c(1:157,321:325),]
+fulton_name <- fulton_name[c(1:114,135, 202,204),]
+
+atl_name <- rbind(dekalb_name, fulton_name)
+
+## remove CTs with zero population (these are the islands off the MA coast) ##
+atl_shp<-fulton_shp[fulton_shp$GEOID10 %in% atl_name$CODE,]
+
+atl_bbox<-as.numeric(st_bbox(atl_shp))
+
+xlim<-c(atl_bbox[1], atl_bbox[3])
+ylim<-c(atl_bbox[2], atl_bbox[4])
+
+## long form by race ##
+shp_plot2208<-gather(atl_shp,'race','ga_fit2208_bias',
+                 c(ga_bias_ij_dp2208_w,ga_bias_ij_dp2208_b),factor_key = T)
+
+shp_plot2208$race<-mapvalues(shp_plot2208$race,
+                         from=c('ga_bias_ij_dp2208_w','ga_bias_ij_dp2208_b'),
+                         to=c('NHW','Black'))
+
+shp_plot2208$exp_factor<-cut(shp_plot2208$ga_fit2208_bias,breaks=ga_q,
+   labels=c('<0.210','[0.210,0.466)','[0.466,0.722)','[0.722,0.978)','[0.978,1.234)',
+                                      '[1.234,1.490)','1.490+'),right=F,levels=levels)
+
+## race-stratified expected counts, BOS ##  
+atl_maps2208 <- ggplot(shp_plot2208, aes(fill = exp_factor)) +
+  geom_sf(colour=NA) +
+  coord_sf(xlim=xlim,ylim=ylim)+
+  #scale_fill_brewer(palette = "YlOrRd", na.value = "white")+
+  scale_fill_manual(values=brewer.pal(n = 7, name = "BrBG"), na.value = "white")+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.ticks.y=element_blank(),
+        axis.title.y=element_blank(),
+        legend.title=element_blank(),
+        text=element_text(size=18),
+        strip.text.x = element_blank(),
+        strip.background = element_rect(fill = "white", colour = NA),
+        panel.background = element_rect(fill = "white", colour = NA),
+        legend.direction = "horizontal",
+        legend.background = element_rect(fill = "white", colour = NA),
+        legend.position = "bottom", 
+        legend.key = element_rect(fill = "white", colour = NA),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        legend.box.background = element_rect(fill = "white", colour = NA)) +
+  facet_wrap(~ race)
+
+b2208 <- cowplot::plot_grid(ma_maps2208 + theme(legend.position="none"),
+                          bos_maps2208 + theme(legend.position="none"),
+                          ga_maps2208 + theme(legend.position="none"),
+                          atl_maps2208 + theme(legend.position="none"),
+                          legend,ncol=1,rel_heights = c(3,2.5,3,2.5,.22))
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

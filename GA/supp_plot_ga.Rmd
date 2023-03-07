@@ -271,8 +271,8 @@ xtable(summary_dp_minus_dc,digits = 4)
 ### boxplot of comparasion for the SMR estimates using the census denominators with the true SMRs
 
 ```{r sim_from_cluster2}
-setwd("~/Desktop/Research/Rachel/CT_race_diff_privacy/results_manu")
-load("simnum4.RData")
+# setwd("~/Desktop/Research/Rachel/CT_race_diff_privacy/results_manu")
+load("../results_manu/GA/fitted_value3.RData")
 dp0527_fit <- cars
 dp0527_fit_mean <- apply(dp0527_fit, 2, mean)
 load("simnum5.RData")

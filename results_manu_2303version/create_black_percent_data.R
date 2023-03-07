@@ -69,7 +69,7 @@ ma_shp$exp_factor<-cut(ma_shp$pct_black,breaks=ma_q,
 ## race-stratified expected counts, MA ##
 ma_maps_b_pct<-ggplot(ma_shp, aes(fill = exp_factor)) +
   geom_sf(colour=NA) +
-  scale_fill_brewer(palette = "YlOrRd")+
+  scale_fill_brewer(palette = "YlOrRd", na.value = "white", na.translate = F)+
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
         axis.ticks.x=element_blank(),
@@ -99,14 +99,13 @@ ylim<-c(bos_bbox[2], bos_bbox[2]+.8*(bos_bbox[4]-bos_bbox[2]))
 
 
 bos_shp$exp_factor<-cut(bos_shp$pct_black,breaks=ma_q,
-                             labels=c('<0.210','[0.210,0.466)','[0.466,0.722)','[0.722,0.978)','[0.978,1.234)',
-                                      '[1.234,1.490)','1.490+'),right=F)
-
+                        labels=c('<2','[2,5)','[5,10)','[10,25)','[25,50)',
+                                 '[50,75)','75+'),right=F)
 ## race-stratified expected counts, BOS ##  
 bos_maps_b_pct<-ggplot(bos_shp, aes(fill = exp_factor)) +
   geom_sf(colour=NA) +
   coord_sf(xlim=xlim,ylim=ylim)+
-  scale_fill_brewer(palette = "YlOrRd")+
+  scale_fill_brewer(palette = "YlOrRd", na.value = "white", na.translate = F)+
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
         axis.ticks.x=element_blank(),
@@ -154,13 +153,13 @@ ma_q<-c(0,2,5, 10, 25,50,75,100)
 
 
 ga_shp$exp_factor<-cut(ga_shp$pct_black,breaks=ma_q,
-                       labels=c('<0.210','[0.210,0.466)','[0.466,0.722)','[0.722,0.978)','[0.978,1.234)',
-                                '[1.234,1.490)','1.490+'),right=F)
+                       labels=c('<2','[2,5)','[5,10)','[10,25)','[25,50)',
+                                '[50,75)','75+'),right=F)
 
 ## race-stratified expected counts, MA ##
 ga_maps_b_pct<-ggplot(ga_shp, aes(fill = exp_factor)) +
   geom_sf(colour=NA) +
-  scale_fill_brewer(palette = "YlOrRd")+
+  scale_fill_brewer(palette = "YlOrRd", na.value = "white", na.translate = F)+
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
         axis.ticks.x=element_blank(),
@@ -230,7 +229,7 @@ atl_shp$exp_factor<-cut(atl_shp$pct_black,breaks=ma_q,
 atl_maps_b_pct<-ggplot(atl_shp, aes(fill = exp_factor)) +
   geom_sf(colour=NA) +
   coord_sf(xlim=xlim,ylim=ylim)+
-  scale_fill_brewer(palette = "YlOrRd")+
+  scale_fill_brewer(palette = "YlOrRd", na.value = "white", na.translate = F)+
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
         axis.ticks.x=element_blank(),

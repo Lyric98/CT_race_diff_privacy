@@ -111,10 +111,12 @@ b0<- ggplot(box0, aes(x=variable,y=value, fill=Data)) + xlab(NULL)+ ylab(NULL)+s
     geom_boxplot()+
   scale_fill_brewer(palette = "Set1")
 box1 <- box_compare[box_compare$variable=="beta1_bias",]
-b1<- ggplot(box1, aes(x=variable,y=value, fill=Data)) + xlab(NULL)+ ylab("MA")+scale_y_continuous(labels = percent_format())+ggtitle("Black vs NHW") +
+b1<- ggplot(box1, aes(x=variable,y=value, fill=Data)) + xlab(NULL)+ ylab("MA")+scale_y_continuous(labels = percent_format())+ggtitle("") +
+  #ggtitle("Black vs NHW") +
     geom_boxplot()+theme_linedraw()+ geom_hline(yintercept = 0, color = "black", linetype = "dashed")+ coord_cartesian(ylim=c(-0.15, 0.15))
 box2 <- box_compare[box_compare$variable=="beta2_bias",]
-b2<- ggplot(box2, aes(x=variable,y=value, fill=Data)) + xlab(NULL) + ylab(NULL)+scale_y_continuous(labels = percent_format())+ggtitle("Poverty")+
+b2<- ggplot(box2, aes(x=variable,y=value, fill=Data)) + xlab(NULL) + ylab(NULL)+scale_y_continuous(labels = percent_format())+ggtitle("")+
+  #ggtitle("Poverty")+
     geom_boxplot()+theme_linedraw()+ geom_hline(yintercept = 0, color = "black", linetype = "dashed")+ coord_cartesian(ylim=c(-0.006, 0.006))
 
 
@@ -157,53 +159,75 @@ legend <- cowplot::get_legend(
             legend.position = "bottom", 
             legend.key = element_rect(fill = "white", colour = NA),
             panel.grid.major = element_line(colour = 'transparent'),
-        panel.grid.minor = element_line(colour = 'transparent'),
-        legend.box.background = element_rect(fill = "white", colour = NA)
-            )+
-  scale_fill_brewer(palette = "Set1")
-  #legend.box.margin = margin(0, 0, 0, 12),
-  )
+            panel.grid.minor = element_line(colour = 'transparent'),
+            legend.box.background = element_rect(fill = "white", colour = NA))+
+  scale_fill_brewer(palette = "Set1"))
 
-prow <- plot_grid(
-  b1+ theme(plot.title =element_text(size=12,hjust= 0.5),
+# prow <- plot_grid(
+#   b1+ theme(#plot.title =element_text(size=12,hjust= 0.5),
+#         axis.text.x=element_blank(),
+#         axis.ticks.x=element_blank(),
+#         axis.title.y=element_blank(),
+#         panel.grid.major = element_line(colour = 'transparent'),
+#         panel.grid.minor = element_line(colour = 'transparent'),
+#         panel.background = element_rect(fill = "white", colour = NA),
+#         legend.position = "none")+
+#   scale_fill_brewer(palette = "Set1"),
+#       b3+ theme(axis.title.x=element_blank(),
+#         axis.text.x=element_blank(),
+#         axis.ticks.x=element_blank(),
+#         axis.title.y=element_blank(),
+#         panel.grid.major = element_line(colour = 'transparent'),
+#         panel.grid.minor = element_line(colour = 'transparent'),
+#         panel.background = element_rect(fill = "white", colour = NA),
+#         legend.position = "none")+
+#   scale_fill_brewer(palette = "Set1"),
+#   b2+ theme(#plot.title =element_text(size=12,hjust =0.5),
+#         axis.text.x=element_blank(),
+#         axis.ticks.x=element_blank(),
+#         panel.grid.major = element_line(colour = 'transparent'),
+#         panel.grid.minor = element_line(colour = 'transparent'),
+#         panel.background = element_rect(fill = "white", colour = NA),
+#         legend.position = "none")+
+#   scale_fill_brewer(palette = "Set1"),
+#   b4+ theme(axis.title.x=element_blank(),
+#         axis.text.x=element_blank(),
+#         axis.ticks.x=element_blank(),
+#         panel.grid.major = element_line(colour = 'transparent'),
+#         panel.grid.minor = element_line(colour = 'transparent'),
+#         panel.background = element_rect(fill = "white", colour = NA),
+#         legend.position = "none")+
+#   scale_fill_brewer(palette = "Set1"),
+#  align = 'vh',nrow = 2)
+
+
+box_compare <- box_compare %>% mutate(state = "MA")
+ga_box_compare <- ga_box_compare %>% mutate(state = "GA")
+box_compare <- rbind(box_compare, ga_box_compare)
+# 对 state 变量因子化并按照需要的顺序排序
+box_compare$state <- factor(box_compare$state, levels = c("MA", "GA"))
+box_race <- box_compare[box_compare$variable=="beta1_bias",]
+box_race <- ggplot(box_race, aes(x=variable,y=value, fill=Data)) + xlab(NULL)+ ylab(NULL)+scale_y_continuous(labels = percent_format())+ggtitle("") +  #ggtitle("Black vs NHW") +
+    geom_boxplot() + theme_linedraw() + geom_hline(yintercept = 0, color = "black", linetype = "dashed")+ coord_cartesian(ylim=c(-0.15, 0.15)) + facet_wrap(~state)
+box_poverty <- box_compare[box_compare$variable=="beta2_bias",]
+box_poverty <- ggplot(box_poverty, aes(x=variable, y=value, fill=Data)) + xlab(NULL) + ylab(NULL)+ scale_y_continuous(labels = percent_format()) + ggtitle("") + #ggtitle("Poverty") +
+    geom_boxplot() + theme_linedraw() + geom_hline(yintercept = 0, color = "black", linetype = "dashed") + coord_cartesian(ylim=c(-0.006, 0.006)) + facet_wrap(~state)
+prow_t <- plot_grid(
+  box_race + theme(
+        strip.text.x = element_blank(),
+        strip.background = element_rect(fill = "white", colour = NA),
         axis.text.x=element_blank(),
         axis.ticks.x=element_blank(),
         axis.title.y=element_blank(),
-       #axis.title.y=element_text(size=10),
-       # axis.text.y=element_blank(),
-       # axis.ticks.y=element_blank(),
-      #  plot.margin = unit(c(0,0,0,0), "cm"),
         panel.grid.major = element_line(colour = 'transparent'),
         panel.grid.minor = element_line(colour = 'transparent'),
         panel.background = element_rect(fill = "white", colour = NA),
         legend.position = "none")+
   scale_fill_brewer(palette = "Set1"),
-  b2+ theme(plot.title =element_text(size=12,hjust =0.5),
-        axis.text.x=element_blank(),
-        axis.ticks.x=element_blank(),
-       # axis.title.y=element_blank(),
-       # axis.text.y=element_blank(),
-       # axis.ticks.y=element_blank(),
-      #  plot.margin = unit(c(0,0,0,0), "cm"),
-        panel.grid.major = element_line(colour = 'transparent'),
-        panel.grid.minor = element_line(colour = 'transparent'),
-        panel.background = element_rect(fill = "white", colour = NA),
-        legend.position = "none")+
-  scale_fill_brewer(palette = "Set1"),
-    b3+ theme(axis.title.x=element_blank(),
-        axis.text.x=element_blank(),
-        axis.ticks.x=element_blank(),
-        axis.title.y=element_blank(),
-       #axis.title.y=element_text(size=10),
-       # axis.text.y=element_blank(),
-       # axis.ticks.y=element_blank(),
-      #  plot.margin = unit(c(0,0,0,0), "cm"),
-        panel.grid.major = element_line(colour = 'transparent'),
-        panel.grid.minor = element_line(colour = 'transparent'),
-        panel.background = element_rect(fill = "white", colour = NA),
-        legend.position = "none")+
-  scale_fill_brewer(palette = "Set1"),
-  b4+ theme(axis.title.x=element_blank(),
+  box_poverty + theme(
+        strip.text.x = element_blank(),
+        strip.background = element_rect(fill = "white", colour = NA),
+        axis.title.x=element_blank(),
         axis.text.x=element_blank(),
         axis.ticks.x=element_blank(),
         panel.grid.major = element_line(colour = 'transparent'),
@@ -211,14 +235,9 @@ prow <- plot_grid(
         panel.background = element_rect(fill = "white", colour = NA),
         legend.position = "none")+
   scale_fill_brewer(palette = "Set1"),
- align = 'vh',
-  #labels = c("Black vs NHW", "        Poverty"),
-  #hjust = -1,
-  nrow = 2
-)
-prow
+ align = 'vh',nrow = 2)
 
-coef_boxplot<-plot_grid(prow,legend, nrow=2, rel_heights = c(2, .25))
+coef_boxplot<-plot_grid(prow_t,legend, nrow=2, rel_heights = c(2, .25))
 coef_boxplot
 
 mean_bias <- rbind(mean(ce_sim$beta0_bias), mean(ce_sim$beta1_bias), mean(ce_sim$beta2_bias))%>% cbind( rbind(mean(dp_sim$beta0_bias), mean(dp_sim$beta1_bias), mean(dp_sim$beta2_bias))) %>% cbind( rbind(mean(dp0527_sim$beta0_bias), mean(dp0527_sim$beta1_bias), mean(dp0527_sim$beta2_bias)))%>% cbind( rbind(mean(dp0825_sim$beta0_bias), mean(dp0825_sim$beta1_bias), mean(dp0825_sim$beta2_bias)))
@@ -395,11 +414,11 @@ scale_y_continuous(labels = percent_format(), limits = c(-1.03, 1.2))+
         #strip.text = element_text(size = 18),
     #strip.background = element_rect(fill = "white", colour = NA),
         panel.background = element_rect(fill = "white", colour = NA),
-    legend.direction = "horizontal",
-            legend.background = element_rect(fill = "white", colour = NA),
-            legend.position = "bottom", 
-            legend.key = element_rect(fill = "white", colour = NA),
-            panel.grid.major = element_line(colour = 'transparent'),
+        legend.direction = "horizontal",
+        legend.background = element_rect(fill = "white", colour = NA),
+        legend.position = "bottom", 
+        legend.key = element_rect(fill = "white", colour = NA),
+        panel.grid.major = element_line(colour = 'transparent'),
         panel.grid.minor = element_line(colour = 'transparent'),
         legend.box.background = element_rect(fill = "white", colour = NA))+
   #scale_fill_brewer(palette = "Set1")
@@ -817,21 +836,19 @@ ga_melt_mape$state <- "GA"
 melt_mape_2state <- melt(rbind(melt_mape, ga_melt_mape))
 melt_mape_2state$state <- factor(melt_mape_2state$state, levels = c("MA", "GA"))
 smr_mape_bw_2 <- ggplot(melt_mape_2state, aes(x=race,y=value, fill=Data)) +
-    geom_boxplot(outlier.shape = NA)+ ylab(NULL)+ xlab(NULL)+
-  theme_linedraw()+
-scale_y_continuous(labels = percent_format(), limits = c(0, 1.2))+ggtitle("")+
-  theme(strip.background = element_rect(fill = "white", colour = NA),
+    geom_boxplot(outlier.shape = NA)+ ylab(NULL)+ xlab(NULL)+ theme_linedraw()+
+    scale_y_continuous(labels = percent_format(), limits = c(0, 1.2))+ggtitle("")+
+    theme(strip.background = element_rect(fill = "white", colour = NA),
         panel.background = element_rect(fill = "white", colour = NA),
-    legend.direction = "horizontal",
-            legend.background = element_rect(fill = "white", colour = NA),
-            legend.position = "bottom",
-            legend.key = element_rect(fill = "white", colour = NA),
-            panel.grid.major = element_line(colour = 'transparent'),
+        legend.direction = "horizontal",
+        legend.background = element_rect(fill = "white", colour = NA),
+        legend.position = "bottom",
+        legend.key = element_rect(fill = "white", colour = NA),
+        panel.grid.major = element_line(colour = 'transparent'),
         panel.grid.minor = element_line(colour = 'transparent'),
         legend.box.background = element_rect(fill = "white", colour = NA))+
-  scale_fill_brewer(palette = "Set1")+ geom_hline(yintercept = 0, color = "black", linetype = "dashed")+facet_wrap(~state)
-
-
+    scale_fill_brewer(palette = "Set1")+ geom_hline(yintercept = 0, color = "black", linetype =   "dashed") +        
+    facet_wrap(~state)
 
 # ga_smr_mape_bw_woo <- ggplot(ga_melt_mape, aes(x=race,y=value, fill=Data)) + 
 #     geom_boxplot(outlier.shape = NA)+ ylab(NULL)+ xlab(NULL)+
@@ -878,11 +895,11 @@ ga_smr_bias_bw_woo <- ggplot(ga_melt_bias, aes(x=race,y=value, fill=variable)) +
   theme_linedraw()+
   theme(strip.background = element_rect(fill = "white", colour = NA),
         panel.background = element_rect(fill = "white", colour = NA),
-    legend.direction = "horizontal",
-            legend.background = element_rect(fill = "white", colour = NA),
-            legend.position = "bottom", 
-            legend.key = element_rect(fill = "white", colour = NA),
-            panel.grid.major = element_line(colour = 'transparent'),
+        legend.direction = "horizontal",
+        legend.background = element_rect(fill = "white", colour = NA),
+        legend.position = "bottom", 
+        legend.key = element_rect(fill = "white", colour = NA),
+        panel.grid.major = element_line(colour = 'transparent'),
         panel.grid.minor = element_line(colour = 'transparent'),
         legend.box.background = element_rect(fill = "white", colour = NA))+
   scale_fill_brewer(palette = "Set1")+ geom_hline(yintercept = 0, color = "black", linetype = "dashed")
@@ -896,8 +913,7 @@ melt_bias_2state$state <- factor(melt_bias_2state$state, levels = c("MA", "GA"))
 smr_bias_bw_2 <- ggplot(melt_bias_2state, aes(x=race,y=value, fill=Data)) + 
     geom_boxplot(outlier.shape = NA)+ coord_cartesian(ylim=c(-0.5, 0.8))+ xlab(NULL)+ylab(NULL)+
   theme_linedraw()+
-  theme(
-    strip.background = element_rect(fill = "white", colour = NA),
+  theme(strip.background = element_rect(fill = "white", colour = NA),
         panel.background = element_rect(fill = "white", colour = NA),
     legend.direction = "horizontal",
             legend.background = element_rect(fill = "white", colour = NA),
@@ -907,9 +923,6 @@ smr_bias_bw_2 <- ggplot(melt_bias_2state, aes(x=race,y=value, fill=Data)) +
         panel.grid.minor = element_line(colour = 'transparent'),
         legend.box.background = element_rect(fill = "white", colour = NA))+
   scale_fill_brewer(palette = "Set1")+ geom_hline(yintercept = 0, color = "black", linetype = "dashed")+facet_wrap(~state)
-
-
-
 
 
 # prow_ga <- plot_grid(

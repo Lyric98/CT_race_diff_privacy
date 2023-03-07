@@ -328,31 +328,31 @@ xtable(summary_pe_under,digits = 4)
 
 ```{r sim_from_cluster2}
 
-load("./sim/results/fitted_value20.RData")
+load("../results_manu/GA/fitted_value3.RData")
 dp0527_fit <- fitted_values
 dp0527_fit_mean <- apply(dp0527_fit, 2, mean)
-load("./sim/results/fitted_value19.RData")
+load("../results_manu/GA/fitted_value2.RData")
 dp_fit <- fitted_values
 dp_fit_mean <- apply(dp_fit, 2, mean)
-load("./sim/results/fitted_value1.RData")
+load("../results_manu/GA/fitted_value1.RData")
 ce_fit <- fitted_values
 ce_fit_mean <- apply(ce_fit, 2, mean)
-load("./sim/results/fitted_value22.RData")
-dp22_fit <- fitted_values
-dp22_fit_mean <- apply(dp22_fit, 2, mean)
-load("./sim/results/fitted_value8.RData")
+# load("./sim/results/fitted_value22.RData")
+# dp22_fit <- fitted_values
+# dp22_fit_mean <- apply(dp22_fit, 2, mean)
+load("../results_manu/GA/fitted_value5.RData")
 dp2208_fit <- fitted_values
 dp2208_fit_mean <- apply(dp2208_fit, 2, mean)
 
-load("./sim/results/exp_theta20.RData")
+load("../results_manu/GA/exp_theta3.RData")
 true_smrs_dp20 = exp_theta
-load("./sim/results/exp_theta19.RData")
+load("../results_manu/GA/exp_theta2.RData")
 true_smrs_dp19 = exp_theta
-load("./sim/results/exp_theta1.RData")
+load("../results_manu/GA/exp_theta1.RData")
 true_smrs_ce = exp_theta
-load("./sim/results/exp_theta22.RData")
-true_smrs_dp22 = exp_theta
-load("./sim/results/exp_theta8.RData")
+# load("./sim/results/exp_theta22.RData")
+# true_smrs_dp22 = exp_theta
+load("../results_manu/GA/exp_theta5.RData")
 true_smrs_dp2208 = exp_theta
 
 # compute smrdps
@@ -372,10 +372,10 @@ mape_ij_dp20 = colSums(abs((smrdp20-true_smrs_dp20)/true_smrs_dp20))/100
 exp_counts_ce = data.frame(t(matrix(rep(adat$exp_counts_ce,100),c(length(adat$exp_counts_ce),100))))
 smrce = ce_fit/exp_counts_ce
 mape_ij_ce = colSums(abs((smrce-true_smrs_ce)/true_smrs_ce))/100
-# 2022-03-16 dp
-exp_counts_dp22 = data.frame(t(matrix(rep(adat$exp_counts_dp22,100),c(length(adat$exp_counts_dp22),100))))
-smrdp22 = dp22_fit/exp_counts_dp22
-mape_ij_dp22 = colSums(abs((smrdp22-true_smrs_dp22)/true_smrs_dp22))/100
+# # 2022-03-16 dp
+# exp_counts_dp22 = data.frame(t(matrix(rep(adat$exp_counts_dp22,100),c(length(adat$exp_counts_dp22),100))))
+# smrdp22 = dp22_fit/exp_counts_dp22
+# mape_ij_dp22 = colSums(abs((smrdp22-true_smrs_dp22)/true_smrs_dp22))/100
 # 2022-08-25 dp
 exp_counts_dp2208 = data.frame(t(matrix(rep(adat$exp_counts_dp0825,100),c(length(adat$exp_counts_dp0825),100))))
 smrdp2208 = dp2208_fit/exp_counts_dp2208
@@ -390,9 +390,9 @@ mape_ij_dp2208 = colSums(abs((smrdp2208-true_smrs_dp2208)/true_smrs_dp2208))/100
 
 ```{r MAPE boxplot2}
 # looking at boxplots of the mean absolute percentage error of the SMRs for each CT/race group (relative to ce)
-smr_mape <- cbind(adat[1:2], mape_ij_ce, mape_ij_dp19, mape_ij_dp20, mape_ij_dp22, mape_ij_dp2208) 
-smr_mape_box <- smr_mape[,c("GEOID", "race", "mape_ij_ce","mape_ij_dp19","mape_ij_dp20", "mape_ij_dp22", "mape_ij_dp2208")]
-names(smr_mape_box) <- c("GEOID", "race", "DC","DP19","DP20", "DP22", "DP2208")
+smr_mape <- cbind(adat[1:2], mape_ij_ce, mape_ij_dp19, mape_ij_dp20,  mape_ij_dp2208) 
+smr_mape_box <- smr_mape[,c("GEOID", "race", "mape_ij_ce","mape_ij_dp19","mape_ij_dp20", "mape_ij_dp2208")]
+names(smr_mape_box) <- c("GEOID", "race", "DC","DP19","DP20", "DP22")
 
 melt_mape <- melt(smr_mape_box)
 names(melt_mape)<-c("GEOID","race","Data","value")
@@ -404,16 +404,15 @@ scale_y_continuous(labels = percent_format(), limits = c(0, 1.0))+ggtitle("")
 bias_ij_dp19 = colSums(smrdp19-true_smrs_dp19)/100
 # 2020-05-27 dp
 bias_ij_dp20 = colSums(smrdp20-true_smrs_dp20)/100
-# 2022-03-16 dp
-bias_ij_dp22 = colSums(smrdp22-true_smrs_dp22)/100
 # 2022-08-25 dp
 bias_ij_dp2208 = colSums(smrdp2208-true_smrs_dp2208)/100
 # ce
 bias_ij_ce = colSums(smrce-true_smrs_ce)/100
 
 # looking at boxplots of the mean absolute percentage error of the SMRs for each CT/race group (relative to ce)
-smr_bias <- cbind(adat[1:2], bias_ij_ce, bias_ij_dp19, bias_ij_dp20, bias_ij_dp22, bias_ij_dp2208) 
-smr_bias_box <- smr_bias[,c("GEOID", "race", "bias_ij_ce","bias_ij_dp19","bias_ij_dp20", "bias_ij_dp22", "bias_ij_dp2208")]
+smr_bias <- cbind(adat[1:2], bias_ij_ce, bias_ij_dp19, bias_ij_dp20, bias_ij_dp2208) 
+smr_bias_box <- smr_bias[,c("GEOID", "race", "bias_ij_ce","bias_ij_dp19","bias_ij_dp20", "bias_ij_dp2208")]
+names(smr_bias_box) <- c("GEOID", "race", "DC","DP19","DP20", "DP22")
 
 smr_bias_bw_woo <- ggplot(melt(smr_bias_box), aes(x=race,y=value, fill=variable)) + 
     geom_boxplot(outlier.shape = NA)+ylab("Bias")+ coord_cartesian(ylim=c(-0.5, 0.7))+ ylab(NULL) 
@@ -452,9 +451,6 @@ bias19_b <- smr_bias[smr_bias$race=="black",]$bias_ij_dp19
 bias20_w <- smr_bias[smr_bias$race=="white",]$bias_ij_dp20
 bias20_b <- smr_bias[smr_bias$race=="black",]$bias_ij_dp20
 
-bias22_w <- smr_bias[smr_bias$race=="white",]$bias_ij_dp22
-bias22_b <- smr_bias[smr_bias$race=="black",]$bias_ij_dp22
-
 bias2208_w <- smr_bias[smr_bias$race=="white",]$bias_ij_dp2208
 bias2208_b <- smr_bias[smr_bias$race=="black",]$bias_ij_dp2208
 
@@ -464,22 +460,20 @@ huizong(bias19_w)
 huizong(bias19_b)
 huizong(bias20_w)
 huizong(bias20_b)
-huizong(bias22_w)
-huizong(bias22_b)
 huizong(bias2208_w)
 huizong(bias2208_b)
 
 # percentage of upward biases
-upward_bias <- rbind(mean(bias10_w>0), mean(bias10_b>0))%>% cbind( rbind(mean(bias19_w>0), mean(bias19_b>0)))%>% cbind( rbind(mean(bias20_w>0), mean(bias20_b>0))) %>% cbind( rbind(mean(bias22_w>0), mean(bias22_b>0)))%>% cbind( rbind(mean(bias2208_w>0), mean(bias2208_b>0)))
+upward_bias <- rbind(mean(bias10_w>0), mean(bias10_b>0))%>% cbind( rbind(mean(bias19_w>0), mean(bias19_b>0)))%>% cbind( rbind(mean(bias20_w>0), mean(bias20_b>0))) %>% cbind( rbind(mean(bias2208_w>0), mean(bias2208_b>0)))
 upward_bias <- upward_bias*100
-colnames(upward_bias)<-c("DC","DP19", "DP20", "DP22", "DP2208")
+colnames(upward_bias)<-c("DC","DP19", "DP20", "DP22")
 rownames(upward_bias) <- c("NHW", "Black")
 xtable(upward_bias,digits = 4)
 
 # average biases
-avg_bias <- rbind(mean(bias10_w), mean(bias10_b))%>% cbind( rbind(mean(bias19_w), mean(bias19_b)))%>% cbind( rbind(mean(bias20_w), mean(bias20_b))) %>% cbind( rbind(mean(bias22_w), mean(bias22_b)))%>% cbind( rbind(mean(bias2208_w), mean(bias2208_b)))
+avg_bias <- rbind(mean(bias10_w), mean(bias10_b))%>% cbind( rbind(mean(bias19_w), mean(bias19_b)))%>% cbind( rbind(mean(bias20_w), mean(bias20_b))) %>% cbind( rbind(mean(bias2208_w), mean(bias2208_b)))
 
-colnames(avg_bias)<-c("DC","DP19", "DP20", "DP22", "DP2208")
+colnames(avg_bias)<-c("DC","DP19", "DP20", "DP22")
 rownames(avg_bias) <- c("NHW", "Black")
 xtable(avg_bias,digits = 4)
 
@@ -494,9 +488,6 @@ mape19_b <- smr_mape[smr_mape$race=="black",]$mape_ij_dp19
 mape20_w <- smr_mape[smr_mape$race=="white",]$mape_ij_dp20
 mape20_b <- smr_mape[smr_mape$race=="black",]$mape_ij_dp20
 
-mape22_w <- smr_mape[smr_mape$race=="white",]$mape_ij_dp22
-mape22_b <- smr_mape[smr_mape$race=="black",]$mape_ij_dp22
-
 mape2208_w <- smr_mape[smr_mape$race=="white",]$mape_ij_dp2208
 mape2208_b <- smr_mape[smr_mape$race=="black",]$mape_ij_dp2208
 
@@ -506,14 +497,12 @@ huizong(mape19_w)
 huizong(mape19_b)
 huizong(mape20_w)
 huizong(mape20_b)
-huizong(mape22_w)
-huizong(mape22_b)
 huizong(mape2208_w)
 huizong(mape2208_b)
 
-avg_mape <- rbind(mean(mape10_w), mean(mape10_b))%>% cbind( rbind(mean(mape19_w), mean(mape19_b)))%>% cbind( rbind(mean(mape20_w), mean(mape20_b))) %>% cbind( rbind(mean(mape22_w), mean(mape22_b)))%>% cbind( rbind(mean(mape2208_w), mean(mape2208_b)))
+avg_mape <- rbind(mean(mape10_w), mean(mape10_b))%>% cbind( rbind(mean(mape19_w), mean(mape19_b)))%>% cbind( rbind(mean(mape20_w), mean(mape20_b))) %>% cbind( rbind(mean(mape2208_w), mean(mape2208_b)))
 
-colnames(avg_mape)<-c("DC","DP19", "DP20", "DP22", "DP2208")
+colnames(avg_mape)<-c("DC","DP19", "DP20", "DP22")
 rownames(avg_mape) <- c("NHW", "Black")
 xtable(avg_mape,digits = 4)
 
@@ -526,7 +515,7 @@ xtable(avg_mape,digits = 4)
 ```{r}
 #### MAPE0527 plot
 load('./sim/bw_adat5.RData')
-adat <- cbind(adat, mape_ij_dp20)[,c(1, 2, 9)] #2877*4
+adat <- cbind(adat, mape_ij_dp20)[,c(1, 2, 8)] #2877*4
 
 
 ## put in wide format to merge with the shapefile ##

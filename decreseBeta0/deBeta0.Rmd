@@ -17,6 +17,10 @@ library(scales)
 library(xtable)
 library(plyr)
 
+require(cowplot)
+library(grid)
+library(gridExtra)
+
 setwd("~/Desktop/Research/Rachel/CT_race_diff_privacy/results_manu")
 
 load("0coef1.RData")
@@ -25,16 +29,16 @@ load("0coef2.RData")
 dp_sim <- cars
 load("0coef3.RData")
 dp0527_sim <- cars
-load("0coef4.RData")
-dp22_sim <- cars
+# load("0coef4.RData")
+# dp22_sim <- cars
 load("0coef5.RData")
 dp0825_sim <- cars
 
-## set working directory to wherever this file is located ##
-current_path <- getActiveDocumentContext()$path
-setwd(dirname(current_path ))
+# ## set working directory to wherever this file is located ##
+# current_path <- getActiveDocumentContext()$path
+# setwd(dirname(current_path ))
 
-load("bw_adat5.RData")
+load("../bw_adat5.RData")
 names(adat)
 ```
 
@@ -44,7 +48,6 @@ names(adat)
 ce_sim <- ce_sim %>% mutate(beta0_bias = beta0 + 0.5) %>% mutate(beta1_bias = beta1 - 0.4) %>% mutate(beta2_bias = beta2 - 0.01) 
 dp_sim <- dp_sim %>% mutate(beta0_bias = beta0 + 0.5) %>% mutate(beta1_bias = beta1 - 0.4) %>% mutate(beta2_bias = beta2 - 0.01) 
 dp0527_sim <- dp0527_sim %>% mutate(beta0_bias = beta0 + 0.5) %>% mutate(beta1_bias = beta1 - 0.4) %>% mutate(beta2_bias = beta2 - 0.01)
-dp22_sim <- dp22_sim %>% mutate(beta0_bias = beta0 + 0.5) %>% mutate(beta1_bias = beta1 - 0.4) %>% mutate(beta2_bias = beta2 - 0.01) 
 dp0825_sim <- dp0825_sim %>% mutate(beta0_bias = beta0 + 0.5) %>% mutate(beta1_bias = beta1 - 0.4) %>% mutate(beta2_bias = beta2 - 0.01) 
 
 box_compare1 <- ce_sim[,c("beta0_bias", "beta1_bias", "beta2_bias")] 
@@ -56,57 +59,67 @@ box_compare2 <- box_compare2 %>% mutate(Data="DP19")
 box_compare3 <- dp0527_sim[,c("beta0_bias", "beta1_bias", "beta2_bias")] 
 #box_compare3 <- dp0527_sim[,c("beta0", "beta1", "beta2")] 
 box_compare3 <- box_compare3 %>% mutate(Data="DP20")
-box_compare4 <- dp22_sim[,c("beta0_bias", "beta1_bias", "beta2_bias")] 
-#box_compare3 <- dp0527_sim[,c("beta0", "beta1", "beta2")] 
-box_compare4 <- box_compare4 %>% mutate(Data="DP22")
 box_compare5 <- dp0825_sim[,c("beta0_bias", "beta1_bias", "beta2_bias")] 
-box_compare5 <- box_compare5 %>% mutate(Data="DP2208")
-box_compare <- melt(rbind(box_compare1, box_compare2, box_compare3, box_compare4, box_compare5))
+box_compare5 <- box_compare5 %>% mutate(Data="DP22")
+box_compare <- melt(rbind(box_compare1, box_compare2, box_compare3, box_compare5))
 
-ggplot(box_compare, aes(x=variable,y=value, fill=Data)) + 
+ggplot(box_compare, aes(x=variable,y=value, fill=Data)) +
     geom_boxplot()
-par(mfrow=c(1,3)) 
+par(mfrow=c(1,2))
 box0 <- box_compare[box_compare$variable=="beta0_bias",]
 b0<- ggplot(box0, aes(x=variable,y=value, fill=Data)) + xlab(NULL)+ ylab(NULL)+scale_y_continuous(labels = percent_format())+ggtitle("") +
-    geom_boxplot()
+    geom_boxplot()+
+  scale_fill_brewer(palette = "Set1")
 box1 <- box_compare[box_compare$variable=="beta1_bias",]
-b1<- ggplot(box1, aes(x=variable,y=value, fill=Data)) + xlab(NULL)+ ylab(NULL)+scale_y_continuous(labels = percent_format())+ggtitle("") +
-    geom_boxplot()
+b1<- ggplot(box1, aes(x=variable,y=value, fill=Data)) + xlab(NULL)+ ylab("MA")+scale_y_continuous(labels = percent_format())+ggtitle("") +
+  #ggtitle("Black vs NHW") +
+    geom_boxplot()+theme_linedraw()+ geom_hline(yintercept = 0, color = "black", linetype = "dashed")+ coord_cartesian(ylim=c(-0.15, 0.15))
 box2 <- box_compare[box_compare$variable=="beta2_bias",]
 b2<- ggplot(box2, aes(x=variable,y=value, fill=Data)) + xlab(NULL) + ylab(NULL)+scale_y_continuous(labels = percent_format())+ggtitle("")+
-    geom_boxplot()
-
-
-
-require(cowplot)
-library(grid)
-library(gridExtra)
+  #ggtitle("Poverty")+
+    geom_boxplot()+theme_linedraw()+ geom_hline(yintercept = 0, color = "black", linetype = "dashed")+ coord_cartesian(ylim=c(-0.006, 0.006))
 
 legend <- cowplot::get_legend(
   # create some space to the left of the legend
-  b0+ theme(legend.box.margin = margin(0, 0, 0, 12)))
-
-# add the legend to the row we made earlier. Give it one-third of 
-# the width of one plot (via rel_widths).
-
+  b1+ theme(legend.direction = "horizontal",
+            legend.background = element_rect(fill = "white", colour = NA),
+            legend.position = "bottom", 
+            legend.key = element_rect(fill = "white", colour = NA),
+            panel.grid.major = element_line(colour = 'transparent'),
+            panel.grid.minor = element_line(colour = 'transparent'),
+            legend.box.background = element_rect(fill = "white", colour = NA))+
+  scale_fill_brewer(palette = "Set1"))
 
 prow <- plot_grid(
-  b0+ theme(legend.position="none"),
-  b1+ theme(legend.position="none"),
-  b2+ theme(legend.position="none"),
-  align = 'vh',
-  labels = c("Beta0", "Beta1", "Beta2"),
-  hjust = -1,
-  nrow = 1
-)
+  b1+ theme(strip.text.x = element_blank(),
+        strip.background = element_rect(fill = "white", colour = NA),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        panel.background = element_rect(fill = "white", colour = NA),
+        legend.position = "none")+
+  scale_fill_brewer(palette = "Set1"),
+  b2+ theme(strip.text.x = element_blank(),
+        strip.background = element_rect(fill = "white", colour = NA),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        panel.background = element_rect(fill = "white", colour = NA),
+        legend.position = "none")+
+  scale_fill_brewer(palette = "Set1"),
+  align = 'vh', nrow = 1)
 #prow
 
-coef_boxplot<-plot_grid(prow,legend, rel_widths = c(3, .4))
+coef_boxplot<-plot_grid(prow,legend, nrow=2, rel_heights = c(1, .25))
 coef_boxplot
 
-mean_bias <- rbind(mean(ce_sim$beta0_bias), mean(ce_sim$beta1_bias), mean(ce_sim$beta2_bias))%>% cbind( rbind(mean(dp_sim$beta0_bias), mean(dp_sim$beta1_bias), mean(dp_sim$beta2_bias))) %>% cbind( rbind(mean(dp0527_sim$beta0_bias), mean(dp0527_sim$beta1_bias), mean(dp0527_sim$beta2_bias)))%>% cbind( rbind(mean(dp22_sim$beta0_bias), mean(dp22_sim$beta1_bias), mean(dp22_sim$beta2_bias)))%>% cbind( rbind(mean(dp0825_sim$beta0_bias), mean(dp0825_sim$beta1_bias), mean(dp0825_sim$beta2_bias)))
+mean_bias <- rbind(mean(ce_sim$beta0_bias), mean(ce_sim$beta1_bias), mean(ce_sim$beta2_bias))%>% cbind( rbind(mean(dp_sim$beta0_bias), mean(dp_sim$beta1_bias), mean(dp_sim$beta2_bias))) %>% cbind( rbind(mean(dp0527_sim$beta0_bias), mean(dp0527_sim$beta1_bias), mean(dp0527_sim$beta2_bias)))%>%cbind( rbind(mean(dp0825_sim$beta0_bias), mean(dp0825_sim$beta1_bias), mean(dp0825_sim$beta2_bias)))
 
-colnames(mean_bias)<-c("DC", "DP19", "DP20", "DP22", "DP0825")
+colnames(mean_bias)<-c("DC", "DP19", "DP20", "DP22")
 #rownames(mean_bias) <- c()
 xtable(mean_bias,digits = 4)
 ```
@@ -114,31 +127,14 @@ xtable(mean_bias,digits = 4)
 ```{r coef percent error}
 # percent error = (coef - beta)/beta * 100%
 ## coef percent error##
-ce_sim <- ce_sim %>% mutate(beta0_pe = beta0 - 0) %>% mutate(beta1_bias = beta1 - 0.4) %>% mutate(beta2_bias = beta2 - 0.01) 
-dp_sim <- dp_sim %>% mutate(beta0_bias = beta0 - 0) %>% mutate(beta1_bias = beta1 - 0.4) %>% mutate(beta2_bias = beta2 - 0.01) 
-dp0527_sim <- dp0527_sim %>% mutate(beta0_bias = beta0 - 0) %>% mutate(beta1_bias = beta1 - 0.4) %>% mutate(beta2_bias = beta2 - 0.01)
-dp22_sim <- dp22_sim %>% mutate(beta0_bias = beta0 - 0) %>% mutate(beta1_bias = beta1 - 0.4) %>% mutate(beta2_bias = beta2 - 0.01) 
-dp0825_sim <- dp0825_sim %>% mutate(beta0_bias = beta0 - 0) %>% mutate(beta1_bias = beta1 - 0.4) %>% mutate(beta2_bias = beta2 - 0.01) 
+ce_sim <- ce_sim %>% mutate(beta0_pe = beta0 + 0.5) %>% mutate(beta1_bias = beta1 - 0.4) %>% mutate(beta2_bias = beta2 - 0.01) 
+dp_sim <- dp_sim %>% mutate(beta0_bias = beta0 + 0.5) %>% mutate(beta1_bias = beta1 - 0.4) %>% mutate(beta2_bias = beta2 - 0.01) 
+dp0527_sim <- dp0527_sim %>% mutate(beta0_bias = beta0 + 0.5) %>% mutate(beta1_bias = beta1 - 0.4) %>% mutate(beta2_bias = beta2 - 0.01)
+dp0825_sim <- dp0825_sim %>% mutate(beta0_bias = beta0 + 0.5) %>% mutate(beta1_bias = beta1 - 0.4) %>% mutate(beta2_bias = beta2 - 0.01) 
 
-# box_compare1 <- ce_sim[,c("beta0_bias", "beta1_bias", "beta2_bias")] 
-# #box_compare1 <- ce_sim[,c("beta0", "beta1", "beta2")] 
-# box_compare1 <- box_compare1 %>% mutate(Data="DC") 
-# #box_compare2 <- dp_sim[,c("beta0", "beta1", "beta2")] 
-# box_compare2 <- dp_sim[,c("beta0_bias", "beta1_bias", "beta2_bias")] 
-# box_compare2 <- box_compare2 %>% mutate(Data="DP19")
-# box_compare3 <- dp0527_sim[,c("beta0_bias", "beta1_bias", "beta2_bias")] 
-# #box_compare3 <- dp0527_sim[,c("beta0", "beta1", "beta2")] 
-# box_compare3 <- box_compare3 %>% mutate(Data="DP20")
-# box_compare4 <- dp22_sim[,c("beta0_bias", "beta1_bias", "beta2_bias")] 
-# #box_compare3 <- dp0527_sim[,c("beta0", "beta1", "beta2")] 
-# box_compare4 <- box_compare4 %>% mutate(Data="DP22")
-# box_compare <- melt(rbind(box_compare1, box_compare2, box_compare3, box_compare4))
+summary_text <- adat %>% mutate(DP19 = (exp_counts_dp-exp_counts_ce)/exp_counts_ce) %>% mutate(DP20 = (exp_counts_dp0527-exp_counts_ce)/exp_counts_ce) %>% mutate(DP22 = (exp_counts_dp0825-exp_counts_ce)/exp_counts_ce)
 
-
-
-summary_text <- adat %>% mutate(DP19 = (exp_counts_dp-exp_counts_ce)/exp_counts_ce) %>% mutate(DP20 = (exp_counts_dp0527-exp_counts_ce)/exp_counts_ce) %>% mutate(DP22 = (exp_counts_dp22-exp_counts_ce)/exp_counts_ce)%>% mutate(DP2208 = (exp_counts_dp0825-exp_counts_ce)/exp_counts_ce)
-
-box_pe <- melt(summary_text[,c("race", "DP19", "DP20","DP22","DP2208")])
+box_pe <- melt(summary_text[,c("race", "DP19", "DP20","DP22")])
 
 box_pe$race<-mapvalues(box_pe$race,
                          from=c('white','black'),
@@ -146,13 +142,22 @@ box_pe$race<-mapvalues(box_pe$race,
 
 colnames(box_pe) <- c("race", "Data", "value")
 
-fig1 <- ggplot(box_pe, aes(x=race,y=value, fill=Data)) + xlab(NULL) + ylab(NULL)+ggtitle("")+ geom_boxplot(outlier.shape = NA)+ coord_cartesian(ylim=c(-1.2, 1.8))+ ylab(NULL) 
-
-fig1_percent_scale <- ggplot(box_pe, aes(x=race,y=value, fill=Data)) + xlab(NULL) + ylab(NULL)+ggtitle("")+
-#    geom_boxplot()+ 
+fig1_percent_scale <- ggplot(box_pe, aes(x=race,y=value, fill=Data)) + xlab(NULL) + ylab(NULL)+ggtitle("")+theme_linedraw()+ 
    geom_boxplot(outlier.shape = NA)+ 
-  #coord_cartesian(ylim=c(-1.2, 1.8))+ ylab(NULL) +
-scale_y_continuous(labels = percent_format(), limits = c(-1.03, 1.2))
+scale_y_continuous(labels = percent_format(), limits = c(-1.03, 1.2))+
+  theme(strip.text = element_blank(),
+        #strip.text = element_text(size = 18),
+    #strip.background = element_rect(fill = "white", colour = NA),
+        panel.background = element_rect(fill = "white", colour = NA),
+        legend.direction = "horizontal",
+        legend.background = element_rect(fill = "white", colour = NA),
+        legend.position = "bottom", 
+        legend.key = element_rect(fill = "white", colour = NA),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        legend.box.background = element_rect(fill = "white", colour = NA))+
+  scale_fill_manual(values=brewer.pal(n = 4, name = "Set1")[-1], na.value = "white")+ 
+  geom_hline(yintercept = 0, color = "black", linetype = "dashed")
 fig1_percent_scale
 ```
 
@@ -174,21 +179,12 @@ colnames(P_dp22) <- c("DP22")
 P_dp2208 <- matrix(adat$exp_counts_dp0825)
 colnames(P_dp2208) <- c("DP2208")
 
-# scatter plot of P matrix (ce vs. dp)
-# P_dp_w_GEOID <- cbind(adat[1:2], P_dp, Ptrue) 
-# P_dp0527_w_GEOID <- cbind(adat[1:2], P_dp0527, Ptrue) 
-# P_dp22_w_GEOID <- cbind(adat[1:2], P_dp22, Ptrue) 
 P2_w_GEOID <- cbind(adat[1:2], P_dp, P_dp0527, P_dp22,P_dp2208, Ptrue) 
 
 P_dp_ce <- melt(P2_w_GEOID, id=c("GEOID", "race", "Ptrue"))
 names(P_dp_ce)[3:4] <- c("DC", "Data")
 P_dp_ce_scatter <- ggplot(data = P_dp_ce, mapping = aes(x = DC, y = value, color=Data)) + geom_point(alpha=0.3) + ylab("Expected DP counts") + xlab("Expected DC counts")
 scatter_exp <- P_dp_ce_scatter + facet_wrap(~race,scales="free") + geom_abline(colour="red")
-
-#pdf('scatter_exp.pdf',width=7,height=6)
-# P_dp_ce_scatter2 <- ggplot(data = P_dp_ce, mapping = aes(x = Ptrue, y = value, color=race)) + geom_point(alpha=0.3) + ylab("P_dp")+scale_color_brewer(palette="Dark2")
-# P_dp_ce_scatter2 + facet_wrap(~variable) + geom_abline(colour="grey")
-
 ```
 
 Average difference of expected counts
@@ -279,37 +275,32 @@ xtable(summary_pe_under,digits = 4)
 
 ```{r sim_from_cluster2}
 setwd("~/Desktop/Research/Rachel/CT_race_diff_privacy/results_manu")
-load("fitted_value3.RData")
+load("0fitted_value3.RData")
 dp0527_fit <- fitted_values
 dp0527_fit_mean <- apply(dp0527_fit, 2, mean)
-load("fitted_value2.RData")
+load("0fitted_value2.RData")
 dp_fit <- fitted_values
 dp_fit_mean <- apply(dp_fit, 2, mean)
-load("fitted_value10.RData")
+load("0fitted_value1.RData")
 ce_fit <- fitted_values
 ce_fit_mean <- apply(ce_fit, 2, mean)
-load("fitted_value4.RData")
-dp22_fit <- fitted_values
-dp22_fit_mean <- apply(dp22_fit, 2, mean)
-load("fitted_value5.RData")
+load("0fitted_value5.RData")
 dp2208_fit <- fitted_values
 dp2208_fit_mean <- apply(dp2208_fit, 2, mean)
 
-load("exp_theta3.RData")
+load("0exp_theta3.RData")
 true_smrs_dp20 = exp_theta
-load("exp_theta2.RData")
+load("0exp_theta2.RData")
 true_smrs_dp19 = exp_theta
-load("exp_theta10.RData")
+load("0exp_theta1.RData")
 true_smrs_ce = exp_theta
-load("exp_theta4.RData")
-true_smrs_dp22 = exp_theta
-load("exp_theta5.RData")
+load("0exp_theta5.RData")
 true_smrs_dp2208 = exp_theta
 
 # compute smrdps
 current_path <- getActiveDocumentContext()$path
 setwd(dirname(current_path))
-load("bw_adat5.RData")
+load("../bw_adat5.RData")
 
 # old dp
 exp_counts_dp19 = data.frame(t(matrix(rep(adat$exp_counts_dp,100),c(length(adat$exp_counts_dp),100))))
@@ -323,10 +314,6 @@ mape_ij_dp20 = colSums(abs((smrdp20-true_smrs_dp20)/true_smrs_dp20))/100
 exp_counts_ce = data.frame(t(matrix(rep(adat$exp_counts_ce,100),c(length(adat$exp_counts_ce),100))))
 smrce = ce_fit/exp_counts_ce
 mape_ij_ce = colSums(abs((smrce-true_smrs_ce)/true_smrs_ce))/100
-# 2022-03-16 dp
-exp_counts_dp22 = data.frame(t(matrix(rep(adat$exp_counts_dp22,100),c(length(adat$exp_counts_dp22),100))))
-smrdp22 = dp22_fit/exp_counts_dp22
-mape_ij_dp22 = colSums(abs((smrdp22-true_smrs_dp22)/true_smrs_dp22))/100
 # 2022-08-25 dp
 exp_counts_dp2208 = data.frame(t(matrix(rep(adat$exp_counts_dp0825,100),c(length(adat$exp_counts_dp0825),100))))
 smrdp2208 = dp2208_fit/exp_counts_dp2208
@@ -341,33 +328,63 @@ mape_ij_dp2208 = colSums(abs((smrdp2208-true_smrs_dp2208)/true_smrs_dp2208))/100
 
 ```{r MAPE boxplot2}
 # looking at boxplots of the mean absolute percentage error of the SMRs for each CT/race group (relative to ce)
-smr_mape <- cbind(adat[1:2], mape_ij_ce, mape_ij_dp19, mape_ij_dp20, mape_ij_dp22, mape_ij_dp2208) 
-smr_mape_box <- smr_mape[,c("GEOID", "race", "mape_ij_ce","mape_ij_dp19","mape_ij_dp20", "mape_ij_dp22", "mape_ij_dp2208")]
-names(smr_mape_box) <- c("GEOID", "race", "DC","DP19","DP20", "DP22", "DP2208")
+smr_mape <- cbind(adat[1:2], mape_ij_ce, mape_ij_dp19, mape_ij_dp20,mape_ij_dp2208) 
+smr_mape_box <- smr_mape[,c("GEOID", "race", "mape_ij_ce","mape_ij_dp19","mape_ij_dp20", "mape_ij_dp2208")]
+names(smr_mape_box) <- c("GEOID", "race", "DC","DP19","DP20", "DP22")
 
 melt_mape <- melt(smr_mape_box)
+melt_mape$race<-mapvalues(melt_mape$race,
+                         from=c('white','black'),
+                         to=c('NHW','Black'))
+
 names(melt_mape)<-c("GEOID","race","Data","value")
 smr_mape_bw_woo <- ggplot(melt_mape, aes(x=race,y=value, fill=Data)) + 
-    geom_boxplot(outlier.shape = NA)+ylab("MAPE")+
-scale_y_continuous(labels = percent_format(), limits = c(0, 1.2))+ggtitle("")
+    geom_boxplot(outlier.shape = NA)+ ylab(NULL)+ xlab(NULL)+ theme_linedraw()+
+    scale_y_continuous(labels = percent_format(), limits = c(0, 1.2))+ggtitle("MAPE")+
+    theme(plot.title =element_text(size=10,hjust= 0.5),
+        strip.background = element_rect(fill = "white", colour = NA),
+        panel.background = element_rect(fill = "white", colour = NA),
+        legend.direction = "horizontal",
+        legend.background = element_rect(fill = "white", colour = NA),
+        legend.position = "bottom",
+        legend.key = element_rect(fill = "white", colour = NA),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        legend.box.background = element_rect(fill = "white", colour = NA))+
+    scale_fill_brewer(palette = "Set1")+ geom_hline(yintercept = 0, color = "black", linetype =   "dashed")
 
 # old dp
 bias_ij_dp19 = colSums(smrdp19-true_smrs_dp19)/100
 # 2020-05-27 dp
 bias_ij_dp20 = colSums(smrdp20-true_smrs_dp20)/100
-# 2022-03-16 dp
-bias_ij_dp22 = colSums(smrdp22-true_smrs_dp22)/100
 # 2022-08-25 dp
 bias_ij_dp2208 = colSums(smrdp2208-true_smrs_dp2208)/100
 # ce
 bias_ij_ce = colSums(smrce-true_smrs_ce)/100
 
 # looking at boxplots of the mean absolute percentage error of the SMRs for each CT/race group (relative to ce)
-smr_bias <- cbind(adat[1:2], bias_ij_ce, bias_ij_dp19, bias_ij_dp20, bias_ij_dp22, bias_ij_dp2208) 
-smr_bias_box <- smr_bias[,c("GEOID", "race", "bias_ij_ce","bias_ij_dp19","bias_ij_dp20", "bias_ij_dp22", "bias_ij_dp2208")]
+smr_bias <- cbind(adat[1:2], bias_ij_ce, bias_ij_dp19, bias_ij_dp20, bias_ij_dp2208) 
+smr_bias_box <- smr_bias[,c("GEOID", "race", "bias_ij_ce","bias_ij_dp19","bias_ij_dp20", "bias_ij_dp2208")]
+names(smr_bias_box) <- c("GEOID", "race", "DC","DP19","DP20", "DP22")
 
-smr_bias_bw_woo <- ggplot(melt(smr_bias_box), aes(x=race,y=value, fill=variable)) + 
-    geom_boxplot(outlier.shape = NA)+ylab("Bias")+ coord_cartesian(ylim=c(-0.5, 0.8))+ ylab(NULL) 
+melt_bias <- melt(smr_bias_box)
+melt_bias$race<-mapvalues(melt_bias$race,
+                         from=c('white','black'),
+                         to=c('NHW','Black'))
+smr_bias_bw_woo <- ggplot(melt_bias, aes(x=race,y=value, fill=variable)) + 
+    geom_boxplot(outlier.shape = NA)+ggtitle("Bias")+ coord_cartesian(ylim=c(-0.5, 0.8))+ xlab(NULL)+ylab(NULL)+
+  theme_linedraw()+
+  theme(plot.title =element_text(size=10,hjust= 0.5),
+        strip.background = element_rect(fill = "white", colour = NA),
+        panel.background = element_rect(fill = "white", colour = NA),
+        legend.direction = "horizontal",
+        legend.background = element_rect(fill = "white", colour = NA),
+        legend.position = "bottom", 
+        legend.key = element_rect(fill = "white", colour = NA),
+        panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        legend.box.background = element_rect(fill = "white", colour = NA))+
+  scale_fill_brewer(palette = "Set1")+ geom_hline(yintercept = 0, color = "black", linetype = "dashed")
 
 require(cowplot)
 library(grid)
@@ -375,18 +392,22 @@ library(gridExtra)
 
 legend <- cowplot::get_legend(
   # create some space to the left of the legend
-  smr_mape_bw_woo+ theme(legend.box.margin = margin(0, 0, 0, 12)))
+  smr_mape_bw_woo+ theme(legend.direction = "horizontal",
+            legend.background = element_rect(fill = "white", colour = NA),
+            legend.position = "bottom", 
+            legend.key = element_rect(fill = "white", colour = NA),
+            panel.grid.major = element_line(colour = 'transparent'),
+        panel.grid.minor = element_line(colour = 'transparent'),
+        legend.box.background = element_rect(fill = "white", colour = NA)))
 
 prow <- plot_grid(
   smr_bias_bw_woo+ theme(legend.position="none"),
-  smr_mape_bw_woo+ theme(legend.position="none"),
-  align = 'vh',
-  labels = c("Bias", "MAPE"),
-  hjust = -1,
-  nrow = 1
-)
+  smr_mape_bw_woo+ theme(legend.position="none"), nrow = 1)
+  # labels = c("Bias", "MAPE"),
+  # hjust = -1,
+  
 
-smr_mape_bias <-cowplot::plot_grid(prow,legend, rel_widths = c(3, .4))
+smr_mape_bias <-cowplot::plot_grid(prow,legend, nrow=2, rel_heights = c(1, .25))
 smr_mape_bias
 
 ```
